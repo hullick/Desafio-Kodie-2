@@ -13,17 +13,23 @@ export type ServerErrorProps = {
 /** Erro 500 / Open Food Facts indisponível (ex.: limite de requisições atingido). */
 export function ServerError({ requestId }: ServerErrorProps) {
   const navigate = useNavigate()
-  const { from, status } = useErrorRouteState()
-  const techId = requestId ?? `#SB-${status ?? 500}`
+  const { from, status, kind } = useErrorRouteState()
+  // Bloqueio: o navegador não expõe o status, então o código técnico diz o motivo.
+  const blocked = kind === 'blocked'
+  const techId = requestId ?? (blocked ? '#SB-LIMITE' : `#SB-${status ?? 500}`)
   return (
     <PageTemplate mobile={{ mode: 'stack', title: 'Escanear', onBack: () => navigate('/') }}>
       <div className="mx-auto flex w-full max-w-xl flex-col gap-space-lg px-margin py-space-md lg:px-0 lg:py-space-xl">
         <ErrorHeroBlock
           icon="cloud_off"
           badgeIcon="warning"
-          status={{ label: 'Instabilidade temporária', tone: 'warning', pulse: true }}
-          title="Não conseguimos falar com a base de alimentos"
-          description="A Open Food Facts não respondeu agora. Isso costuma passar em poucos minutos."
+          status={{ label: blocked ? 'Limite de consultas' : 'Instabilidade temporária', tone: 'warning', pulse: true }}
+          title={blocked ? 'A base de alimentos pediu uma pausa' : 'Não conseguimos falar com a base de alimentos'}
+          description={
+            blocked
+              ? 'A Open Food Facts limitou o acesso por excesso de consultas em pouco tempo. Aguarde alguns minutos e tente de novo.'
+              : 'A Open Food Facts não respondeu agora. Isso costuma passar em poucos minutos.'
+          }
           primaryAction={{ label: 'Tentar novamente', icon: 'refresh', onClick: () => navigate(from, { replace: true }) }}
           secondaryAction={{ label: 'Ver meus favoritos', icon: 'favorite', href: '/favoritos' }}
         />

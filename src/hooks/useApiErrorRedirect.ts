@@ -20,6 +20,7 @@ export function useApiErrorRedirect() {
       const state: ErrorRouteState = {
         from: pathname + search,
         status: err instanceof ApiError ? err.status : null,
+        kind: err instanceof ApiError ? err.kind : null,
       }
       navigate(to, { replace: true, state })
       return true
@@ -31,5 +32,5 @@ export function useApiErrorRedirect() {
 /** Lê, na tela de erro, de onde o usuário veio (padrão: início). */
 export function useErrorRouteState(): ErrorRouteState {
   const state = useLocation().state as Partial<ErrorRouteState> | null
-  return { from: state?.from ?? '/', status: state?.status ?? null }
+  return { from: state?.from ?? '/', status: state?.status ?? null, kind: state?.kind ?? null }
 }
