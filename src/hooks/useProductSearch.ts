@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HOME_CATEGORIES, HOME_FETCH_SIZE } from '../config/categories'
+import { HOME_CATALOG_TAGS, HOME_FETCH_SIZE } from '../config/categories'
 import type { SearchPage } from '../models/SearchPage'
 import { getCatalog, searchProducts } from '../services/openFoodFacts'
 import { useApiErrorRedirect } from './useApiErrorRedirect'
@@ -10,8 +10,6 @@ export type ProductSearchState =
   | { status: 'error'; error: unknown }
 
 type Result = { term: string; page?: SearchPage; error?: unknown }
-
-const CATALOG_TAGS = HOME_CATEGORIES.map((c) => c.offTag)
 
 /**
  * Produtos da Home: sem texto → catálogo base (uma requisição, em cache por 15 min);
@@ -28,7 +26,7 @@ export function useProductSearch(term: string): ProductSearchState {
     const { signal } = controller
     const request = term
       ? searchProducts({ query: term, pageSize: HOME_FETCH_SIZE }, { signal })
-      : getCatalog(CATALOG_TAGS, HOME_FETCH_SIZE, { signal })
+      : getCatalog(HOME_CATALOG_TAGS, HOME_FETCH_SIZE, { signal })
     request.then(
       (page) => setResult({ term, page }),
       (error: unknown) => {

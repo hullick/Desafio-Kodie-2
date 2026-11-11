@@ -6,10 +6,11 @@ import { LoadingResults } from '../components/organisms/LoadingResults'
 import { ProductResults } from '../components/organisms/ProductResults'
 import { SearchHero } from '../components/organisms/SearchHero'
 import { PageTemplate } from '../components/templates/PageTemplate'
-import { HOME_CATEGORIES, offCategoryTag } from '../config/categories'
 import { THRESHOLDS } from '../config/thresholds'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useProductSearch } from '../hooks/useProductSearch'
+import { useCategoryNames } from '../i18n/categoryNames'
+import { buildCategoryOptions } from '../lib/categoryOptions'
 import { toProductCard } from '../lib/productCard'
 import type { Product } from '../models/Product'
 import { EMPTY_FILTERS, type FilterState } from '../types/filters'
@@ -36,10 +37,17 @@ export function Home() {
   // NOVA, ordenação e paginação filtram os produtos já carregados, sem novas requisições.
   const search = useProductSearch(term)
   const thresholds = useDebouncedValue(filters.thresholds, THRESHOLD_DELAY_MS)
+  const categoryNames = useCategoryNames()
+
+  // Categorias do filtro: as que aparecem nos produtos carregados, no idioma do navegador.
+  const categories = useMemo(
+    () => (search.status === 'success' && categoryNames ? buildCategoryOptions(search.page.products, categoryNames) : []),
+    [search, categoryNames],
+  )
 
   const results = useMemo(() => {
     if (search.status !== 'success') return []
-    const category = offCategoryTag(filters.category)
+    const category = filters.category
     // Limiar ativo: só passa quem tem o valor informado e dentro do limite.
     const limits = THRESHOLDS.filter((t) => thresholds[t.key].enabled)
     const list = search.page.products.filter(
@@ -64,6 +72,8 @@ export function Home() {
   const submitSearch = (t: string) => {
     setQuery(t)
     setTerm(t.trim())
+    // Outros produtos → outras categorias: a escolhida pode não existir mais.
+    setFilters((f) => ({ ...f, category: '' }))
     setPage(1)
   }
   const changeFilters = (f: FilterState) => {
@@ -82,14 +92,14 @@ export function Home() {
 
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-space-lg px-margin py-space-md lg:flex-row lg:px-margin-lg">
         <div className="lg:hidden">
-          <FilterPanel variant="inline" value={filters} onChange={changeFilters} categories={HOME_CATEGORIES} sort={sortProps} />
+          <FilterPanel variant="inline" value={filters} onChange={changeFilters} categories={categories} sort={sortProps} />
         </div>
         <div className="hidden w-72 shrink-0 lg:block">
           <FilterPanel
             variant="sidebar"
             value={filters}
             onChange={changeFilters}
-            categories={HOME_CATEGORIES}
+            categories={categories}
             thresholds={THRESHOLDS}
             claims={[
               { value: 'sem-gluten', label: 'Sem glúten' },

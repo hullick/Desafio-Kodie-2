@@ -1,21 +1,8 @@
 /**
- * Categorias da Home. `value` é o filtro da interface; `offTag` é a tag em inglês da
- * Open Food Facts (sem o prefixo "en:"), usada na requisição e no filtro local.
+ * Categorias que formam o catálogo base da Home (tags em inglês da Open Food Facts, usadas em
+ * `categories_tags_en`). O filtro de categorias da tela é montado a partir dos produtos que vierem.
  */
-export type HomeCategory = { value: string; label: string; offTag: string }
-
-export const HOME_CATEGORIES: HomeCategory[] = [
-  { value: 'bebidas', label: 'Bebidas', offTag: 'beverages' },
-  { value: 'laticinios', label: 'Laticínios', offTag: 'dairies' },
-  { value: 'cereais', label: 'Cereais', offTag: 'breakfast-cereals' },
-  { value: 'biscoitos', label: 'Biscoitos', offTag: 'biscuits' },
-  { value: 'snacks', label: 'Snacks', offTag: 'snacks' },
-  { value: 'massas', label: 'Massas', offTag: 'pastas' },
-]
+export const HOME_CATALOG_TAGS = ['beverages', 'dairies', 'breakfast-cereals', 'biscuits', 'snacks', 'pastas']
 
 /** Produtos trazidos de uma vez para a Home (máximo por página da API). */
 export const HOME_FETCH_SIZE = 100
-
-export function offCategoryTag(value: string): string | undefined {
-  return HOME_CATEGORIES.find((c) => c.value === value)?.offTag
-}
