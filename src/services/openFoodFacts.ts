@@ -229,11 +229,24 @@ export async function getAlternatives(
     if (local.length >= limit) return local
   }
 
-  const page = await searchProducts(
-    { category: categories.join('|'), nutriscore: better, sort: 'nutriscore', pageSize: ALTERNATIVE_POOL, country },
-    { signal },
-  )
-  return pick(page.products)
+  const search = async (tags: string[]) =>
+    pick(
+      (
+        await searchProducts(
+          { category: tags.join('|'), nutriscore: better, sort: 'nutriscore', pageSize: ALTERNATIVE_POOL, country },
+          { signal },
+        )
+      ).products,
+    )
+
+  // Primeiro só a categoria mais específica (a última): uma categoria-mãe ampla traz os melhores
+  // Nutri-Scores de outro tipo de produto (ex.: margarina → azeites, "gorduras vegetais") e o filtro de
+  // base descarta todos. Só se faltarem alternativas alarga para as demais, em uma segunda busca.
+  const specific = await search(categories.slice(-1))
+  if (specific.length >= limit || categories.length < 2) return specific
+  const have = new Set(specific.map((p) => p.code))
+  const wider = (await search(categories)).filter((p) => !have.has(p.code))
+  return [...specific, ...wider].slice(0, limit)
 }
 
 /** Catálogo base já em cache, sem requisição (undefined se não houver ou tiver expirado). */
