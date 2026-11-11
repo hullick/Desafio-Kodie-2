@@ -11,9 +11,21 @@ export type StatusPillProps = {
   variant?: StatusVariant
   shape?: 'pill' | 'rounded'
   icon?: string
+  /** Ponto colorido antes do texto (pisca com `pulse`). */
+  dot?: boolean
+  pulse?: boolean
   uppercase?: boolean
   className?: string
   children: ReactNode
+}
+
+const DOT: Record<StatusTone, string> = {
+  neutral: 'bg-outline',
+  success: 'bg-primary',
+  warning: 'bg-warning',
+  error: 'bg-error',
+  brand: 'bg-primary',
+  inverse: 'bg-inverse-primary',
 }
 
 const SOFT: Record<StatusTone, string> = {
@@ -49,6 +61,8 @@ export function StatusPill({
   variant = 'soft',
   shape = 'rounded',
   icon,
+  dot = false,
+  pulse = false,
   uppercase = false,
   className,
   children,
@@ -66,6 +80,12 @@ export function StatusPill({
         className,
       )}
     >
+      {dot && (
+        <span className="relative flex h-2 w-2" aria-hidden>
+          {pulse && <span className={cn('absolute inline-flex h-full w-full animate-ping rounded-full opacity-75', DOT[tone])} />}
+          <span className={cn('relative inline-flex h-2 w-2 rounded-full', DOT[tone])} />
+        </span>
+      )}
       {icon && <Icon name={icon} size={variant === 'text' ? 16 : 14} />}
       {children}
     </span>
