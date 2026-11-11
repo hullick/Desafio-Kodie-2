@@ -8,8 +8,8 @@ import { ListAlertsCard } from '../components/organisms/ListAlertsCard'
 import { MarketSyncModal } from '../components/organisms/MarketSyncModal'
 import { PantryDiagnosisCard } from '../components/organisms/PantryDiagnosisCard'
 import { ProductGrid } from '../components/organisms/ProductGrid'
-import { ShoppingChecklist } from '../components/organisms/ShoppingChecklist'
 import { PageTemplate } from '../components/templates/PageTemplate'
+import { toggleChecklist, useChecklist } from '../hooks/useChecklist'
 import { COMPARE_MAX, setCompareList, useCompareList } from '../hooks/useCompareList'
 import {
   clearFavorites,
@@ -19,13 +19,10 @@ import {
   removeFavorite,
   useFavorites,
 } from '../hooks/useFavorites'
-import { NUTRI_BG } from '../lib/nutritionStyles'
+import { healthScore } from '../lib/healthScore'
 import { toProductCard } from '../lib/productCard'
 import type { Product } from '../models/Product'
 import { getProductsByCodes } from '../services/openFoodFacts'
-import { NUTRI_GRADES, type NutriGrade } from '../types/nutrition'
-/** Pontos por nota para a média da despensa (A = 10 … E = 2). */
-const GRADE_POINTS: Record<NutriGrade, number> = { a: 10, b: 8, c: 6, d: 4, e: 2 }
 
 const SORT_OPTIONS = [
   { value: 'recent', label: 'Adicionados recentemente' },
@@ -63,17 +60,10 @@ function highAlerts(p: Product): Array<{ title: string; text: string; tone: 'err
     }))
 }
 
-function pantryVerdict(score: number) {
-  if (score >= 8) return 'Excelente'
-  if (score >= 6) return 'Boa'
-  if (score >= 4) return 'Atenção'
-  return 'Precisa melhorar'
-}
-
 export function Favorites() {
   const favorites = useFavorites()
   const compare = useCompareList()
-  const [checked, setChecked] = useState<string[]>([])
+  const checklist = useChecklist()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('recent')
@@ -90,6 +80,9 @@ export function Favorites() {
     [favorites],
   )
   const pending = favorites.length - saved.length
+
+  // Produtos no checklist de mercado (carrinho do card; a lista abre pelo carrinho do cabeçalho).
+  const inCart = new Set(checklist.map((e) => e.code))
 
   // Dados guardados com mais de 24 h (ou ausentes) são atualizados numa busca só (code=a,b,c).
   // Falhou (sem internet, limite da API) ou o produto sumiu da base? Fica com os dados guardados,
@@ -116,11 +109,8 @@ export function Favorites() {
   if (sort === 'name') visible.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'pt-BR'))
   if (sort === 'nutriscore') visible.sort((a, b) => (a.nutriscore ?? 'z').localeCompare(b.nutriscore ?? 'z'))
 
-  const graded = saved.filter((p): p is Product & { nutriscore: NutriGrade } => Boolean(p.nutriscore))
-  const score = graded.length ? graded.reduce((s, p) => s + GRADE_POINTS[p.nutriscore], 0) / graded.length : 0
-  const scoreLabel = score.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
-  const healthyShare = graded.length ? Math.round((graded.filter((p) => GRADE_POINTS[p.nutriscore] >= 8).length / graded.length) * 100) : 0
-  const ultra = saved.filter((p) => p.nova === 4)
+  const health = healthScore(saved)
+  const { scoreLabel, healthyShare, ultra } = health
 
   const alerts = saved.flatMap(highAlerts)
 
@@ -137,7 +127,7 @@ export function Favorites() {
           subtitle={`${favorites.length} ${favorites.length === 1 ? 'produto salvo' : 'produtos salvos'} neste aparelho`}
           description="Acompanhe a qualidade nutricional da sua lista e leve-a para o mercado."
           breadcrumbs={[{ label: 'Início', href: '/' }, { label: 'Favoritos' }]}
-          aside={graded.length > 0 && <StatHighlight label="Nota da despensa" value={`${scoreLabel}/10`} indicator={`${healthyShare}% Nutri-Score A ou B`} />}
+          aside={health.graded > 0 && <StatHighlight label="Nota da despensa" value={`${scoreLabel}/10`} indicator={`${healthyShare}% Nutri-Score A ou B`} />}
         />
 
         {favorites.length === 0 ? (
@@ -187,6 +177,7 @@ export function Favorites() {
                       href: `/produto/${p.code}`,
                       favorite: true,
                       onToggleFavorite: () => removeFavorite(p.code),
+                      cart: { active: inCart.has(p.code), onToggle: () => toggleChecklist(p) },
                       compare: {
                         checked: compare.includes(p.code),
                         onChange: () => setCompareList(toggle(compare, p.code)),
@@ -205,32 +196,15 @@ export function Favorites() {
                       Sua lista tem <strong>{healthyShare}%</strong> de itens com Nutri-Score A ou B.
                     </>
                   }
-                  distribution={NUTRI_GRADES.map((g) => ({
-                    label: g.toUpperCase(),
-                    count: graded.filter((p) => p.nutriscore === g).length,
-                    colorClass: NUTRI_BG[g],
-                  })).filter((s) => s.count > 0)}
-                  score={graded.length ? `${scoreLabel} / 10` : undefined}
-                  verdict={graded.length ? pantryVerdict(score) : undefined}
-                  processingNote={`${ultra.length} ${ultra.length === 1 ? 'item ultraprocessado' : 'itens ultraprocessados'} (NOVA 4)`}
+                  distribution={health.distribution}
+                  score={health.graded ? `${scoreLabel} / 10` : undefined}
+                  verdict={health.graded ? health.verdict : undefined}
+                  processingNote={`${ultra} ${ultra === 1 ? 'item ultraprocessado' : 'itens ultraprocessados'} (NOVA 4)`}
                   onClearList={() => {
                     if (window.confirm('Remover todos os produtos dos favoritos?')) clearFavorites()
                   }}
                 />
                 {alerts.length > 0 && <ListAlertsCard alerts={alerts} />}
-                <div className="hidden lg:block">
-                  <ShoppingChecklist
-                    items={saved.map((p) => ({
-                      id: p.code,
-                      title: p.name ?? 'Produto sem nome',
-                      detail: [p.brand, p.quantity].filter(Boolean).join(' · '),
-                      checked: checked.includes(p.code),
-                    }))}
-                    onToggle={(id) => setChecked((c) => toggle(c, id))}
-                    onOpenOnPhone={() => setModal('market')}
-                    onPrint={() => window.print()}
-                  />
-                </div>
               </aside>
             </div>
           </>

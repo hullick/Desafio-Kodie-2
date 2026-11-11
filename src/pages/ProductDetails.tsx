@@ -9,6 +9,7 @@ import { IngredientsPanel } from '../components/organisms/IngredientsPanel'
 import { NutritionTable } from '../components/organisms/NutritionTable'
 import { SugarAlertCard } from '../components/organisms/SugarAlertCard'
 import { PageTemplate } from '../components/templates/PageTemplate'
+import { toggleChecklist, useChecklist } from '../hooks/useChecklist'
 import { toggleFavorite, useFavoriteCodes } from '../hooks/useFavorites'
 import { useProductDetails } from '../hooks/useProductDetails'
 import { useCategoryNames } from '../i18n/categoryNames'
@@ -22,6 +23,7 @@ export function ProductDetails() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const favorites = useFavoriteCodes()
+  const checklist = useChecklist()
   const details = useProductDetails(id)
   const categoryNames = useCategoryNames()
 
@@ -57,6 +59,10 @@ export function ProductDetails() {
     onToggleSave: () => product && toggleFavorite(product),
     onShare: share,
     alternativesHref,
+    cart: {
+      active: product !== null && checklist.some((e) => e.code === product.code),
+      onToggle: () => product && toggleChecklist(product),
+    },
   }
 
   return (

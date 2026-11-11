@@ -3,6 +3,7 @@ import type { NovaGroup, NutriGrade } from '../../types/nutrition'
 import { BadgeNova } from '../atoms/BadgeNova'
 import { BadgeNutriScore } from '../atoms/BadgeNutriScore'
 import { Button } from '../atoms/Button'
+import { CartButton } from '../atoms/CartButton'
 import { FavoriteButton } from '../atoms/FavoriteButton'
 import { ProductThumb } from '../atoms/ProductThumb'
 import { StatusPill, type StatusTone } from '../atoms/StatusPill'
@@ -27,6 +28,8 @@ export type ProductCardProps = {
   href: string
   favorite: boolean
   onToggleFavorite: () => void
+  /** Botão de carrinho ao lado do coração (checklist de mercado). Só aparece abaixo de 1024px. */
+  cart?: { active: boolean; onToggle: () => void }
   compare: { checked: boolean; onChange: (checked: boolean) => void; selectedCount: number; max: number }
   /** Mostra convite para completar dados quando faltam informações. */
   onContribute?: () => void
@@ -61,7 +64,10 @@ function RowCard(p: ProductCardProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-1">
             {p.brand && <span className="text-label-sm tracking-wider text-outline uppercase">{p.brand}</span>}
-            <FavoriteButton active={p.favorite} onToggle={p.onToggleFavorite} productName={p.name} className="-mt-1 -mr-1 ml-auto" />
+            <div className="-mt-1 -mr-1 ml-auto flex items-center">
+              {p.cart && <CartButton active={p.cart.active} onToggle={p.cart.onToggle} productName={p.name} className="lg:hidden" />}
+              <FavoriteButton active={p.favorite} onToggle={p.onToggleFavorite} productName={p.name} />
+            </div>
           </div>
           <h2 className="truncate text-headline-sm leading-tight font-bold text-on-surface">
             <a href={p.href} className="hover:text-primary">
@@ -110,7 +116,10 @@ function ColumnCard(p: ProductCardProps) {
       <div>
         <div className="mb-space-sm flex items-center justify-between">
           <CompareToggle {...p.compare} compact />
-          <FavoriteButton active={p.favorite} onToggle={p.onToggleFavorite} productName={p.name} variant="filled" />
+          <div className="flex items-center gap-1.5">
+            {p.cart && <CartButton active={p.cart.active} onToggle={p.cart.onToggle} productName={p.name} variant="filled" className="lg:hidden" />}
+            <FavoriteButton active={p.favorite} onToggle={p.onToggleFavorite} productName={p.name} variant="filled" />
+          </div>
         </div>
         <ProductThumb
           src={p.imageUrl}

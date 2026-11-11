@@ -2,7 +2,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'reac
 import { cn } from '../../lib/cn'
 import { Icon } from './Icon'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'subtle' | 'ghost' | 'surface'
+export type ButtonVariant = 'primary' | 'secondary' | 'subtle' | 'ghost' | 'surface' | 'danger'
 /** sm 36px · md 40px (padrão desktop) · lg 48px · xl 56px (alvos de toque mobile). */
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl'
 export type ButtonShape = 'rounded' | 'pill'
@@ -36,6 +36,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
     'bg-surface-container-low text-on-surface hover:bg-secondary-container hover:text-on-secondary-container',
   ghost: 'bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
   surface: 'bg-surface-container-lowest text-primary shadow-sm hover:bg-white',
+  danger: 'bg-error text-on-error shadow-sm hover:bg-error/90',
 }
 
 const SIZES: Record<ButtonSize, string> = {

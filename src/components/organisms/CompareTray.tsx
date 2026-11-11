@@ -19,7 +19,8 @@ export function CompareTray({ count, lastItem, onClear, compareHref, min = 2 }: 
   const ready = count >= min
 
   return (
-    <aside className="pointer-events-none fixed bottom-6 left-1/2 z-40 w-full max-w-[800px] -translate-x-1/2 px-4" aria-live="polite">
+    // No mobile fica acima do menu inferior (80px + o botão do scanner, que sobe ~26px); no desktop não há menu.
+    <aside className="pointer-events-none fixed bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))] left-1/2 lg:bottom-6 z-40 w-full max-w-[800px] -translate-x-1/2 px-4" aria-live="polite">
       <div className="pointer-events-auto flex w-full items-center justify-between gap-space-md rounded-2xl bg-inverse-surface p-space-sm px-space-md text-inverse-on-surface shadow-2xl">
         <div className="flex min-w-0 items-center gap-space-sm">
           <div className="relative shrink-0 rounded-xl bg-surface-container-lowest p-0.5">

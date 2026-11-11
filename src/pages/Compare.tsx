@@ -97,7 +97,7 @@ export function Compare() {
 
   if (products.length < 2) {
     return (
-      <PageTemplate activeNav="compare" compareCount={products.length}>
+      <PageTemplate activeNav="compare">
         <div className="px-margin py-space-2xl lg:px-0">
           <ErrorHeroBlock
             icon="compare_arrows"
@@ -185,7 +185,7 @@ export function Compare() {
   const related = relatedFrom(catalog ?? [], category, ids)
 
   return (
-    <PageTemplate activeNav="compare" compareCount={products.length}>
+    <PageTemplate activeNav="compare">
       <div className="flex flex-col gap-space-lg px-margin py-space-md lg:px-0 lg:py-space-xl">
         <ComparisonHeader
           count={products.length}
@@ -241,7 +241,7 @@ export function Compare() {
 /** Carregando os produtos da comparação. */
 function CompareLoading({ count }: { count: number }) {
   return (
-    <PageTemplate activeNav="compare" compareCount={count}>
+    <PageTemplate activeNav="compare">
       <div className="flex flex-col gap-space-lg px-margin py-space-md lg:px-0 lg:py-space-xl" aria-busy>
         <span className="sr-only">Carregando produtos...</span>
         <Skeleton className="h-16 w-full rounded-2xl" />

@@ -37,7 +37,8 @@ export function Modal({ open, onClose, title, description, icon, centered = fals
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      onClose={onClose}
+      // O React propaga o `close` de um <dialog> aninhado (ex.: confirmação dentro do painel): só o próprio fecha.
+      onClose={(e) => e.target === e.currentTarget && onClose()}
       onClick={(e) => e.target === ref.current && onClose()}
       className={cn(
         'm-auto w-[calc(100%-2rem)] rounded-2xl bg-surface-container-lowest p-0 shadow-2xl backdrop:bg-inverse-surface/60 backdrop:backdrop-blur-sm',

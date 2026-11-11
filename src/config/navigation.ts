@@ -11,7 +11,7 @@ export type NavItem = {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'home', label: 'Início / Explorar', shortLabel: 'Início', href: '/', icon: 'search' },
+  { id: 'home', label: 'Início / Explorar', shortLabel: 'Início', href: '/', icon: 'home' },
   { id: 'compare', label: 'Comparador', shortLabel: 'Comparar', href: '/comparar', icon: 'compare_arrows' },
   { id: 'favorites', label: 'Meus Favoritos', shortLabel: 'Favoritos', href: '/favoritos', icon: 'favorite' },
   { id: 'scan', label: 'Escanear EAN', shortLabel: 'Escanear', href: '/scanner', icon: 'barcode_scanner' },

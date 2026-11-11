@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import type { NavId } from '../../config/navigation'
-import { useCompareList } from '../../hooks/useCompareList'
+import { clearChecklist, removeFromChecklist, setChecklistChecked, useChecklist } from '../../hooks/useChecklist'
 import { cn } from '../../lib/cn'
+import { CartDrawer } from '../organisms/CartDrawer'
 import { DesktopHeaderNav } from '../organisms/DesktopHeaderNav'
 import { MobileBottomTabNav } from '../organisms/MobileBottomTabNav'
 import { MobileTopBar } from '../organisms/MobileTopBar'
@@ -16,8 +17,6 @@ export type MobileMode = { mode: 'tab' } | { mode: 'stack'; title: string; onBac
 
 export type PageTemplateProps = {
   activeNav?: NavId
-  /** Contador do item "Comparar" no menu. Padrão: tamanho da lista de comparação guardada. */
-  compareCount?: number
   mobile?: MobileMode
   /** Esconde a lupa do cabeçalho (a Home tem a própria busca). */
   hideSearch?: boolean
@@ -33,15 +32,17 @@ export type PageTemplateProps = {
  */
 export function PageTemplate({
   activeNav,
-  compareCount,
   mobile = { mode: 'tab' },
   hideSearch = false,
   fullWidth = false,
   children,
 }: PageTemplateProps) {
   const [searchOpen, setSearchOpen] = useState(false)
-  const compareList = useCompareList()
+  const [cartOpen, setCartOpen] = useState(false)
+  const checklist = useChecklist()
+  const cartCount = checklist.filter((i) => !i.checked).length
   const openSearch = hideSearch ? undefined : () => setSearchOpen(true)
+  const openCart = () => setCartOpen(true)
 
   return (
     <div className="flex min-h-screen flex-col bg-surface text-body-md text-on-surface antialiased">
@@ -50,9 +51,9 @@ export function PageTemplate({
       </div>
       <div className="lg:hidden">
         {mobile.mode === 'stack' ? (
-          <MobileTopBar onBack={mobile.onBack} title={mobile.title} onOpenSearch={openSearch} />
+          <MobileTopBar onBack={mobile.onBack} title={mobile.title} onOpenSearch={openSearch} onOpenCart={openCart} cartCount={cartCount} />
         ) : (
-          <MobileTopBar onOpenSearch={openSearch} />
+          <MobileTopBar onOpenSearch={openSearch} onOpenCart={openCart} cartCount={cartCount} />
         )}
       </div>
 
@@ -67,10 +68,10 @@ export function PageTemplate({
 
       <div className="lg:hidden">
         {mobile.mode === 'tab' ? (
-          <MobileBottomTabNav activeId={activeNav} compareCount={compareCount ?? compareList.length} />
+          <MobileBottomTabNav activeId={activeNav} />
         ) : (
           mobile.dock && (
-            <div className="pb-safe fixed inset-x-0 bottom-0 z-50 bg-surface-container-lowest/90 p-4 shadow-[0_-2px_12px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+            <div className="fixed inset-x-0 bottom-0 z-50 bg-surface-container-lowest/90 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] shadow-[0_-2px_12px_rgba(15,23,42,0.05)] backdrop-blur-xl">
               {mobile.dock}
             </div>
           )
@@ -81,6 +82,14 @@ export function PageTemplate({
       </div>
 
       {openSearch && <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />}
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={checklist.map(({ code, ...item }) => ({ id: code, ...item }))}
+        onToggle={setChecklistChecked}
+        onRemove={removeFromChecklist}
+        onClear={clearChecklist}
+      />
     </div>
   )
 }
