@@ -1,24 +1,62 @@
 import { cn } from '../../lib/cn'
+import type { NovaGroup, NutriGrade } from '../../types/nutrition'
+import { BadgeNova } from '../atoms/BadgeNova'
+import { BadgeNutriScore } from '../atoms/BadgeNutriScore'
 
-export type PodiumEntry = { name: string; score?: string }
+export type PodiumEntry = { name: string; nutriscore?: NutriGrade | null; nova?: NovaGroup | null }
 
-const PLACE_TEXT = ['text-primary', 'text-secondary', 'text-error']
+/** Uma coluna por produto (classes fixas para o Tailwind encontrar). */
+const COLUMNS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-2 sm:grid-cols-4',
+  5: 'grid-cols-3 sm:grid-cols-5',
+}
 
-/** Pódio de notas: 1º, 2º e 3º lugares. */
+/**
+ * Classificação da comparação, já ordenada (1º primeiro). Todas as posições aparecem, com a mesma
+ * altura; a cor vem dos selos de Nutri-Score e NOVA, não da posição.
+ */
 export function RankingPodium({ entries }: { entries: PodiumEntry[] }) {
-  const top = entries.slice(0, 3)
   return (
-    <ol className="grid grid-cols-3 gap-1.5 rounded-xl bg-surface-container-low p-2 lg:max-w-xl lg:gap-space-sm lg:bg-surface-container-lowest lg:p-space-md lg:shadow-sm">
-      {top.map((e, i) => (
-        <li
-          key={e.name}
-          className={cn('flex flex-col items-center rounded-lg p-1 text-center lg:p-2', i === 0 ? 'lg:border lg:border-primary/20 lg:bg-secondary-container/30' : 'lg:bg-surface-container-low')}
-        >
-          <span className={cn('text-[10px] font-bold tracking-wide uppercase lg:text-[11px]', PLACE_TEXT[i])}>{i + 1}º Lugar</span>
-          <span className={cn('text-[11px] text-on-surface lg:text-headline-sm', i === 0 ? 'font-extrabold' : 'font-semibold')}>{e.name}</span>
-          {e.score && <span className={cn('text-[9px] font-semibold lg:text-label-sm', PLACE_TEXT[i])}>Nota {e.score}</span>}
-        </li>
-      ))}
+    <ol className={cn('grid gap-space-xs lg:gap-space-sm', COLUMNS[entries.length] ?? COLUMNS[5])}>
+      {entries.map((e, i) => {
+        const first = i === 0
+        return (
+          <li
+            key={`${e.name}-${i}`}
+            className={cn(
+              'flex min-w-0 flex-col items-center gap-1.5 rounded-xl p-space-sm text-center',
+              // O card do veredito é claro no mobile e cinza no desktop: o fundo acompanha para contrastar.
+              first ? 'bg-secondary-container/40 ring-1 ring-primary/30' : 'bg-surface-container-low lg:bg-surface-container-lowest',
+            )}
+          >
+            <span
+              className={cn(
+                'text-[10px] font-bold tracking-wide uppercase lg:text-[11px]',
+                first ? 'text-primary' : 'text-on-surface-variant',
+              )}
+            >
+              {i + 1}º lugar
+            </span>
+            <span
+              className={cn(
+                'line-clamp-2 text-label-md break-words text-on-surface lg:text-label-lg',
+                first ? 'font-extrabold' : 'font-semibold',
+              )}
+              title={e.name}
+            >
+              {e.name}
+            </span>
+            {/* Selos no pé do card: alinhados entre colunas mesmo com nomes de 1 ou 2 linhas. */}
+            <span className="mt-auto flex items-center gap-1">
+              <BadgeNutriScore grade={e.nutriscore} variant="circle" />
+              {e.nova && <BadgeNova group={e.nova} variant="square" />}
+            </span>
+          </li>
+        )
+      })}
     </ol>
   )
 }

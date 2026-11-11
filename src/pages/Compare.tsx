@@ -1,19 +1,31 @@
+import { useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { BadgeNova } from '../components/atoms/BadgeNova'
 import { BadgeNutriScore } from '../components/atoms/BadgeNutriScore'
+import { Skeleton } from '../components/atoms/Skeleton'
 import { ComparisonHeader } from '../components/molecules/ComparisonHeader'
 import { ComparisonDuelCarousel } from '../components/organisms/ComparisonDuelCarousel'
 import { ComparisonFullTable, type ComparisonGroup } from '../components/organisms/ComparisonFullTable'
 import { DecisionBar } from '../components/organisms/DecisionBar'
 import { ErrorHeroBlock } from '../components/organisms/ErrorHeroBlock'
 import { NutrientDuelSection, type NutrientDuelBlock } from '../components/organisms/NutrientDuelSection'
-import { NutritionalVerdictCard } from '../components/organisms/NutritionalVerdictCard'
+import { NutritionalVerdictCard, type VerdictInsight } from '../components/organisms/NutritionalVerdictCard'
 import { RelatedProductsGrid } from '../components/organisms/RelatedProductsGrid'
 import { PageTemplate } from '../components/templates/PageTemplate'
+import { useCatalog } from '../hooks/useCatalog'
+import { useCompareProducts } from '../hooks/useCompareProducts'
+import { useCategoryNames } from '../i18n/categoryNames'
+import { isValidBarcode, normalizeBarcode } from '../lib/barcode'
 import { barPercents, formatAmount, healthScore, rankTones } from '../lib/compare'
+import {
+  basisLabel,
+  relatedFrom,
+  sharedCategory,
+  sharedCategoryName,
+  toCompareEntries,
+  type CompareNutrients,
+} from '../lib/compareProducts'
 import type { CompareTone } from '../types/comparison'
-import { COMPARE_PRODUCTS, DEFAULT_COMPARE_IDS, type CompareEntry, type CompareNutrients } from './compare.mock'
-import { POPULAR_ITEMS } from './shared.mock'
 
 const COMPARE_MAX = 5
 
@@ -44,20 +56,30 @@ const TABLE_GROUPS: Array<{ title: string; metrics: Metric[] }> = [
   { title: 'Ingredientes', metrics: [{ key: 'additives', label: 'Aditivos', unit: '', lowerIsBetter: true }] },
 ]
 
+/** Códigos da URL (?ids=a,b,c): válidos, sem repetição, até COMPARE_MAX. */
 function parseIds(raw: string | null): string[] {
-  const ids = raw === null ? DEFAULT_COMPARE_IDS : raw.split(',').filter(Boolean)
-  return [...new Set(ids)].filter((id) => COMPARE_PRODUCTS.some((p) => p.id === id)).slice(0, COMPARE_MAX)
+  const ids = (raw ?? '').split(',').map(normalizeBarcode).filter(isValidBarcode)
+  return [...new Set(ids)].slice(0, COMPARE_MAX)
 }
 
 export function Compare() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const ids = parseIds(params.get('ids'))
-  const setIds = (next: string[]) => setParams({ ids: next.join(',') }, { replace: true })
+  const setIds = (next: string[]) => setParams(next.length ? { ids: next.join(',') } : {}, { replace: true })
 
-  const list = ids.map((id) => COMPARE_PRODUCTS.find((p) => p.id === id)).filter((p): p is CompareEntry => Boolean(p))
-  const ranked = [...list].sort((a, b) => healthScore(a.nutriscore, a.nova) - healthScore(b.nutriscore, b.nova))
-  const products = list.map((p) => ({ ...p, rank: ranked.indexOf(p) + 1 }))
+  const state = useCompareProducts(ids)
+  const catalog = useCatalog()
+  const categoryNames = useCategoryNames()
+  const loaded = useMemo(() => (state.status === 'success' ? state.products : []), [state])
+
+  const products = useMemo(() => {
+    const list = toCompareEntries(loaded)
+    const ranked = [...list].sort((a, b) => healthScore(a.nutriscore, a.nova) - healthScore(b.nutriscore, b.nova))
+    return list.map((p) => ({ ...p, rank: ranked.indexOf(p) + 1 }))
+  }, [loaded])
+
+  if (state.status === 'loading') return <CompareLoading count={ids.length} />
 
   if (products.length < 2) {
     return (
@@ -75,6 +97,8 @@ export function Compare() {
     )
   }
 
+  const basis = basisLabel(loaded)
+  const per = basis === '100ml' ? '100 ml' : basis === '100g' ? '100 g' : '100 g/ml'
   const values = (key: keyof CompareNutrients) => products.map((p) => p.nutrients[key])
   const best = products.find((p) => p.rank === 1) ?? products[0]
   const podium = [...products].sort((a, b) => a.rank - b.rank)
@@ -89,7 +113,10 @@ export function Compare() {
       icon: m.icon,
       iconTone: m.iconTone,
       criterion: m.criterion,
-      winner: winner && m.key !== 'energy' ? `Vencedor: ${winner.shortName} (${formatAmount(winner.nutrients[m.key], m.unit)})` : undefined,
+      winner:
+        winner && m.key !== 'energy'
+          ? `Vencedor: ${winner.shortName} (${formatAmount(winner.nutrients[m.key], m.unit)})`
+          : undefined,
       bars: products.map((p, i) => ({ label: p.shortName, value: formatAmount(v[i], m.unit), percent: percents[i], tone: m.key === 'energy' ? 'neutral' : tones[i] })),
     }
   })
@@ -108,26 +135,56 @@ export function Compare() {
       rows: g.metrics.map((m) => {
         const v = values(m.key)
         const tones = rankTones(v, m.lowerIsBetter)
-        return { label: m.label, cells: v.map((x, i) => ({ value: m.unit ? formatAmount(x, m.unit) : String(x), tone: tones[i] })) }
+        return { label: m.label, cells: v.map((x, i) => ({ value: formatAmount(x, m.unit), tone: tones[i] })) }
       }),
     })),
   ]
 
-  const bySugar = [...products].sort((a, b) => a.nutrients.sugar - b.nutrients.sugar)
-  const bySodium = [...products].sort((a, b) => a.nutrients.sodium - b.nutrients.sodium)
-  const sugarSaved = Math.max(...values('sugar')) - best.nutrients.sugar
-  const related = POPULAR_ITEMS.filter((item) => !ids.includes(item.id))
+  /** Produto com o menor valor informado do nutriente (só se 2+ produtos tiverem o valor). */
+  const lowest = (key: 'sugar' | 'sodium') => {
+    const known = products.filter((p) => p.nutrients[key] !== null)
+    return known.length < 2 ? undefined : [...known].sort((a, b) => a.nutrients[key]! - b.nutrients[key]!)[0]
+  }
+  const leastSugar = lowest('sugar')
+  const leastSodium = lowest('sodium')
+  const insights: VerdictInsight[] = []
+  if (leastSugar) {
+    insights.push({
+      icon: 'monitor_heart',
+      title: 'Controle glicêmico',
+      text: `${leastSugar.shortName} tem o menor teor de açúcar: ${formatAmount(leastSugar.nutrients.sugar, 'g')} por ${per}.`,
+    })
+  }
+  if (leastSodium) {
+    insights.push({
+      icon: 'cardiology',
+      title: 'Proteção cardiovascular',
+      text: `${leastSodium.shortName} tem o menor teor de sódio: ${formatAmount(leastSodium.nutrients.sodium, 'mg')} por ${per}.`,
+    })
+  }
+
+  const sugars = values('sugar').filter((v): v is number => v !== null)
+  const sugarSaved = best.nutrients.sugar === null || sugars.length < 2 ? 0 : Math.max(...sugars) - best.nutrients.sugar
+
+  // Sugestões do catálogo da Home (o mesmo cache; busca só se não estiver guardado).
+  const category = sharedCategory(loaded)
+  const related = relatedFrom(catalog ?? [], category, ids)
 
   return (
     <PageTemplate activeNav="compare" compareCount={products.length}>
       <div className="flex flex-col gap-space-lg px-margin py-space-md lg:px-0 lg:py-space-xl">
-        <ComparisonHeader count={products.length} category="Cereais e matinais" onClear={() => setIds([])} />
+        <ComparisonHeader
+          count={products.length}
+          category={sharedCategoryName(loaded, categoryNames)}
+          onClear={() => setIds([])}
+          basis={basis}
+        />
 
         <ComparisonDuelCarousel products={products} onRemove={(id) => setIds(ids.filter((x) => x !== id))} onSwap={() => navigate('/')} />
 
-        <NutrientDuelSection blocks={blocks} products={products} />
+        <NutrientDuelSection blocks={blocks} products={products} basis={basis} />
 
-        <ComparisonFullTable products={products} groups={groups} />
+        <ComparisonFullTable products={products} groups={groups} basis={basis} />
 
         <NutritionalVerdictCard
           summary={
@@ -136,26 +193,50 @@ export function Compare() {
               {best.nutriscore?.toUpperCase() ?? '—'} e NOVA {best.nova ?? '—'}.
             </>
           }
-          podium={podium.map((p) => ({ name: p.shortName, score: p.nutriscore?.toUpperCase() }))}
-          insights={[
-            { icon: 'monitor_heart', title: 'Controle glicêmico', text: `${bySugar[0].shortName} tem o menor teor de açúcar: ${formatAmount(bySugar[0].nutrients.sugar, 'g')} por 100 g.` },
-            { icon: 'cardiology', title: 'Proteção cardiovascular', text: `${bySodium[0].shortName} tem o menor teor de sódio: ${formatAmount(bySodium[0].nutrients.sodium, 'mg')} por 100 g.` },
-          ]}
-          methodology="Comparação baseada no Nutri-Score, na classificação NOVA e nos valores por 100 g da Open Food Facts. Não substitui orientação de um profissional de saúde."
+          podium={podium.map((p) => ({ name: p.shortName, nutriscore: p.nutriscore, nova: p.nova }))}
+          insights={insights}
+          methodology={`Comparação baseada no Nutri-Score, na classificação NOVA e nos valores por ${per} da Open Food Facts. Valores não informados aparecem como "—". Não substitui orientação de um profissional de saúde.`}
         />
 
-        {related.length > 0 && <RelatedProductsGrid eyebrow="Para comparar também" title="Outros bem avaliados" items={related} seeAllHref="/" seeAllLabel="Ver na busca" />}
+        {related.length > 0 && (
+          <RelatedProductsGrid
+            eyebrow="Para comparar também"
+            title="Outros bem avaliados"
+            items={related}
+            // Abre a busca já filtrada pela categoria da comparação (só existe sugestão com categoria comum).
+            seeAllHref={`/?categoria=${category}`}
+            seeAllLabel="Ver mais nesta categoria"
+          />
+        )}
 
         <DecisionBar
           message={
             sugarSaved > 0
-              ? `Economize ${formatAmount(sugarSaved, 'g')} de açúcar a cada 100 g escolhendo ${best.shortName}.`
+              ? `Economize ${formatAmount(sugarSaved, 'g')} de açúcar a cada ${per} escolhendo ${best.shortName}.`
               : `${best.shortName} tem a melhor classificação geral.`
           }
           primaryLabel={`Ver ${best.shortName}`}
           onPrimary={() => navigate(best.href)}
           onCompareAnother={() => navigate('/')}
         />
+      </div>
+    </PageTemplate>
+  )
+}
+
+/** Carregando os produtos da comparação. */
+function CompareLoading({ count }: { count: number }) {
+  return (
+    <PageTemplate activeNav="compare" compareCount={count}>
+      <div className="flex flex-col gap-space-lg px-margin py-space-md lg:px-0 lg:py-space-xl" aria-busy>
+        <span className="sr-only">Carregando produtos...</span>
+        <Skeleton className="h-16 w-full rounded-2xl" />
+        <div className="grid grid-cols-2 gap-space-md lg:grid-cols-4">
+          {Array.from({ length: Math.max(2, count) }, (_, i) => (
+            <Skeleton key={i} shimmer className="h-56 rounded-2xl" />
+          ))}
+        </div>
+        <Skeleton tone="soft" className="h-72 w-full rounded-2xl" />
       </div>
     </PageTemplate>
   )

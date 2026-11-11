@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { cn } from '../../lib/cn'
 import { Icon } from '../atoms/Icon'
 import { StatusPill } from '../atoms/StatusPill'
 import { RankingPodium, type PodiumEntry } from '../molecules/RankingPodium'
@@ -16,7 +17,7 @@ export type NutritionalVerdictCardProps = {
   methodology?: string
 }
 
-/** Veredito da comparação: parecer, pódio, pontos de análise e selos do vencedor. */
+/** Veredito da comparação: parecer, classificação de todos os produtos, pontos de análise e selos do vencedor. */
 export function NutritionalVerdictCard({ summary, podium, insights = [], tags = [], methodology }: NutritionalVerdictCardProps) {
   return (
     <section className="relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-gradient-to-br from-surface-container-lowest via-surface-container-lowest to-secondary-container/30 p-4 shadow-sm lg:bg-none lg:bg-surface-container-low lg:p-space-xl">
@@ -38,7 +39,7 @@ export function NutritionalVerdictCard({ summary, podium, insights = [], tags = 
           <p className="text-body-md leading-relaxed text-on-surface">{summary}</p>
           <RankingPodium entries={podium} />
           {insights.length > 0 && (
-            <div className="hidden grid-cols-3 gap-space-md pt-2 lg:grid">
+            <div className={cn('grid grid-cols-1 gap-space-sm pt-1 lg:gap-space-md', insights.length > 1 && 'sm:grid-cols-2')}>
               {insights.map((i) => (
                 <TipCard key={i.title} variant="insight" icon={i.icon} title={i.title}>
                   {i.text}
@@ -56,8 +57,9 @@ export function NutritionalVerdictCard({ summary, podium, insights = [], tags = 
             </div>
           )}
           {methodology && (
-            <p className="flex items-center gap-2 pt-space-xs text-body-sm text-outline">
-              <Icon name="verified_user" size={16} /> {methodology}
+            <p className="flex items-start gap-2 pt-space-xs text-body-sm text-outline">
+              <Icon name="verified_user" size={16} className="mt-0.5 shrink-0" />
+              <span>{methodology}</span>
             </p>
           )}
         </div>

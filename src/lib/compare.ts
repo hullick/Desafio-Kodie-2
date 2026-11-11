@@ -3,22 +3,24 @@ import type { NovaGroup, NutriGrade } from '../types/nutrition'
 
 /**
  * Marca o melhor e o pior valor de um nutriente entre os produtos comparados.
- * Empates no melhor/pior recebem o mesmo tom; se todos forem iguais, todos ficam neutros.
+ * Valor não informado (`null`) fica neutro e não entra na disputa. Empates no melhor/pior
+ * recebem o mesmo tom; com menos de 2 valores, ou todos iguais, todos ficam neutros.
  */
-export function rankTones(values: number[], lowerIsBetter: boolean): CompareTone[] {
-  if (values.length < 2) return values.map(() => 'neutral')
-  const min = Math.min(...values)
-  const max = Math.max(...values)
+export function rankTones(values: Array<number | null>, lowerIsBetter: boolean): CompareTone[] {
+  const known = values.filter((v): v is number => v !== null)
+  if (known.length < 2) return values.map(() => 'neutral')
+  const min = Math.min(...known)
+  const max = Math.max(...known)
   if (min === max) return values.map(() => 'neutral')
   const best = lowerIsBetter ? min : max
   const worst = lowerIsBetter ? max : min
   return values.map((v) => (v === best ? 'best' : v === worst ? 'worst' : 'neutral'))
 }
 
-/** Largura das barras em % do maior valor do grupo. */
-export function barPercents(values: number[]): number[] {
-  const max = Math.max(...values, 0)
-  return values.map((v) => (max === 0 ? 0 : Math.round((v / max) * 100)))
+/** Largura das barras em % do maior valor do grupo. Sem valor → sem barra. */
+export function barPercents(values: Array<number | null>): Array<number | undefined> {
+  const max = Math.max(...values.map((v) => v ?? 0), 0)
+  return values.map((v) => (v === null ? undefined : max === 0 ? 0 : Math.round((v / max) * 100)))
 }
 
 /** Pontuação para ordenar produtos: Nutri-Score primeiro, NOVA como desempate (menor é melhor). */
@@ -29,7 +31,7 @@ export function healthScore(nutriscore?: NutriGrade | null, nova?: NovaGroup | n
 
 const NUMBER = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
 
-/** Formata número em pt-BR com unidade (ex.: 0.8 → "0,8 g"). */
-export function formatAmount(value: number, unit: string): string {
-  return `${NUMBER.format(value)} ${unit}`
+/** Formata número em pt-BR com unidade (ex.: 0.8 → "0,8 g"); sem valor → "—". */
+export function formatAmount(value: number | null, unit: string): string {
+  return value === null ? '—' : `${NUMBER.format(value)} ${unit}`.trim()
 }
