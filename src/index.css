@@ -134,6 +134,26 @@
   --shadow-level-1: 0 1px 3px 0 rgb(15 23 42 / 0.05), 0 1px 2px -1px rgb(15 23 42 / 0.05);
   --shadow-level-2: 0 4px 6px -1px rgb(15 23 42 / 0.07), 0 2px 4px -2px rgb(15 23 42 / 0.05);
   --shadow-level-3: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.06);
+
+  /* Animações */
+  --animate-scan-laser: scan-laser 2.2s ease-in-out infinite;
+
+  @keyframes scan-laser {
+    0%,
+    100% {
+      top: 8%;
+    }
+    50% {
+      top: 92%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-scan-laser {
+    animation: none;
+    top: 50%;
+  }
 }
 
 @layer base {
