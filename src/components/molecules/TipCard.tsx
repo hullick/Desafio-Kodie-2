@@ -6,13 +6,29 @@ export type TipCardProps = {
   title: string
   children: ReactNode
   icon?: string
-  /** row → ícone redondo à esquerda (mobile) · stacked → título com ícone e fundo decorativo (barra lateral). */
-  variant?: 'row' | 'stacked'
+  /**
+   * row     → ícone redondo à esquerda (mobile)
+   * stacked → título com ícone e fundo decorativo (barra lateral)
+   * insight → card branco de análise (ex.: "Controle Glicêmico" no veredito)
+   */
+  variant?: 'row' | 'stacked' | 'insight'
   className?: string
 }
 
-/** Dica de compra saudável. */
+/** Dica ou ponto de análise com ícone, título e texto. */
 export function TipCard({ title, children, icon = 'lightbulb', variant = 'row', className }: TipCardProps) {
+  if (variant === 'insight') {
+    return (
+      <div className={cn('rounded-xl bg-surface-container-lowest p-space-md shadow-sm', className)}>
+        <h4 className="mb-1.5 flex items-center gap-2 text-label-lg font-bold text-primary">
+          <Icon name={icon} size={20} />
+          {title}
+        </h4>
+        <p className="text-body-md text-on-surface-variant">{children}</p>
+      </div>
+    )
+  }
+
   if (variant === 'stacked') {
     return (
       <aside className={cn('relative overflow-hidden rounded-2xl bg-surface-container-low p-4', className)}>
