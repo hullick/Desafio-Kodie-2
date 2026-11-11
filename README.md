@@ -10,7 +10,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06b6d4?logo=tailwindcss&logoColor=white)
 ![API](https://img.shields.io/badge/API-Open_Food_Facts-006948)
 
-**[🌐 Aplicação publicada](#-aplicação-publicada)** · **[📦 Repositório](https://github.com/hullick/Desafio-Kodie-2)** · **[✨ Funcionalidades](#-funcionalidades)** · **[🚀 Como executar](#-como-executar)** · **[🤖 Uso de IA](#-uso-de-inteligência-artificial)**
+**[🌐 Aplicação publicada](https://scanbite-blush.vercel.app)** · **[📦 Repositório](https://github.com/hullick/Desafio-Kodie-2)** · **[✨ Funcionalidades](#-funcionalidades)** · **[🚀 Como executar](#-como-executar)** · **[🤖 Uso de IA](#-uso-de-inteligência-artificial)**
 
 </div>
 
@@ -263,7 +263,9 @@ Abra **http://localhost:5173**.
 
 ## 🌐 Aplicação publicada
 
-**Link:** _a preencher após o deploy_ <!-- TODO: colar aqui o link da Vercel/Netlify -->
+**🔗 [scanbite-blush.vercel.app](https://scanbite-blush.vercel.app)**
+
+> A Open Food Facts é gratuita e mantida por voluntários, e às vezes responde **503** (instabilidade ou excesso de consultas). Nesse caso o app mostra a tela de erro com o botão “Tentar novamente”: aguarde alguns instantes e tente de novo.
 
 Publicação na **Vercel** ou **Netlify**:
 
