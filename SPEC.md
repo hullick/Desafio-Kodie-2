@@ -53,11 +53,28 @@ comuns em supermercados e mostra quais riscos ou alertas cada produto traz
 
 **API:** Open Food Facts (gratuita, sem chave para leitura).
 
-| Uso | Endpoint | Verificado |
-|---|---|---|
-| Produto por código de barras | `GET /api/v2/product/{codigo}?fields=...` | Sim, funcionou |
-| Busca com filtros | `GET /api/v2/search?countries_tags_en=brazil&...` | Funcionou em `br.openfoodfacts.org`; deu 503 em `world.` |
-| Lista de países (fase 2) | `static.openfoodfacts.org/data/taxonomies/countries.json` | Sim (~700 KB) |
+Base única: `https://world.openfoodfacts.org`. **Brasil é o filtro padrão** de toda busca/listagem
+(`countries_tags_en=brazil` na v2; critério `countries contains brazil` na `search.pl`). O filtro
+significa "vendido também no Brasil" (produto pode ter outros países).
+
+| # | Uso | Endpoint | Verificado (11/11/2026) |
+|---|---|---|---|
+| 1 | Produto por código (Detalhes, Scanner, digitação) | `GET /api/v3/product/{codigo}?fields=...` | Sim. Inexistente → HTTP 404 com JSON `status: "failure"`, `result.id: "product_not_found"` |
+| 2 | Busca por texto (+ filtros) | `GET /cgi/search.pl?search_terms=...&search_simple=1&json=1&action=process&tagtype_N=...&tag_contains_N=contains&tag_N=...` | Sim: texto + Brasil, filtro de uma nota (`nutrition_grades`), `sort_by=nutriscore_score`. CORS liberado |
+| 3 | Navegar só por filtros (categoria, Nutri-Score, NOVA) | `GET /api/v2/search?countries_tags_en=brazil&categories_tags_en=...&nutrition_grades_tags=a\|b&nova_groups_tags=...` | Sim: `\|` funciona como "ou"; NOVA e `sort_by=nutriscore_score` ok |
+| 4 | Vários produtos por código (Comparador, atualizar Favoritos) | `GET /api/v2/search?code=a,b,c&fields=...` | Sim, uma chamada só |
+| 5 | Alternativas mais saudáveis | `GET /api/v2/search?categories_tags_en={categoria}&nutrition_grades_tags=...&sort_by=nutriscore_score` | Sim (mesma sintaxe do item 3) |
+| — | Lista de países (fase 2) | `static.openfoodfacts.org/data/taxonomies/countries.json` | Sim (~700 KB) |
+
+**Descobertas dos testes:**
+- A v2 **ignora `search_terms`** (com "aveia" devolveu 38 mil produtos sem relação). Texto livre só pela `search.pl`.
+- `world.` e `br.` responderam igual na busca; o **503 é intermitente nos dois** (inclusive com página
+  HTML "Page temporarily unavailable" no corpo) e ocorreu também abaixo de 10 buscas/min.
+- Não testado: vários Nutri-Scores/NOVA ao mesmo tempo na `search.pl` (implementado por exclusão,
+  `tag_contains_N=does_not_contain`) e `sort_by` por nome/popularidade.
+- Não precisam de requisição: imagens (links de `images.openfoodfacts.org`), favoritos e histórico
+  (salvos no aparelho), lista de categorias do filtro (fixa no código), cadastro de produto (link
+  externo) e o monitor da tela de erro (derivado das últimas chamadas).
 
 **Campos usados:** `code`, `product_name`, `brands`, `quantity`, `image_front_url`,
 `nutriscore_grade`, `nova_group`, `nutriments` (`*_100g`), `nutrient_levels`,
@@ -74,7 +91,10 @@ comuns em supermercados e mostra quais riscos ou alertas cada produto traz
 - Para desenvolvimento/testes, a documentação recomenda o ambiente de **staging**
   (`world.openfoodfacts.net`, autenticação básica `off`/`off`) em vez da produção.
 - A API v2 está marcada como obsoleta (a v3 é a atual), mas a **busca estruturada só existe
-  na v2**; produto por código existe na v3. Usar v3 para produto e v2 para busca.
+  na v2**; produto por código existe na v3. Usar v3 para produto, v2 para filtros/códigos e
+  `search.pl` para texto.
+- Produto por código **não** é filtrado por país (a API não permite); a interface pode usar
+  `Product.isFromBrazil` para avisar.
 - **Alternativas para volume maior** (se necessário): baixar o dump oficial (CSV/JSONL) e
   filtrar produtos do Brasil num catálogo local pequeno, usado para busca sem consumir limite.
 
@@ -89,9 +109,11 @@ comuns em supermercados e mostra quais riscos ou alertas cada produto traz
 **Consequências para o projeto:**
 - Busca só dispara por **ação explícita** (botão/Enter), nunca por digitação.
 - Cache das respostas (em memória e `sessionStorage`) para não repetir requisições.
-- Comparação de até 5 produtos = até 5 leituras: reaproveitar os dados já carregados da busca
-  e dos favoritos (guardar o objeto completo) em vez de buscar de novo.
-- Tratar 503 com mensagem amigável e botão "tentar de novo" após alguns segundos.
+- Comparação de até 5 produtos = **1 busca** (`code=a,b,c`), e só dos que não estão em cache.
+- Produtos vindos de buscas entram no cache de produto: abrir o detalhe depois não gasta requisição.
+- Limitador no navegador com margem: 12 leituras/min e 8 buscas/min.
+- 503/502/504/429 ou resposta não-JSON: até 2 novas tentativas com espera crescente
+  (respeitando `Retry-After`); persistindo, tela de erro com "tentar de novo".
 - Desenvolvimento e testes devem respeitar os limites (evitar loops de chamadas).
 
 **Risco técnico (a confirmar no início da implementação):** CORS ao chamar a API direto do

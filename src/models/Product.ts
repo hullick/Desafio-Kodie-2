@@ -43,7 +43,7 @@ export type ProductData = {
   nutriments: NutrimentsData
   nutrientLevels: NutrientLevelsData
   ingredientsText: string | null
-  /** Ids sem prefixo de idioma (ex.: "gluten", "e330", "breakfast-cereals", "brazil"). */
+  /** Ids sem prefixo de idioma (ex.: "gluten", "e330", "breakfast-cereals", "brazil"). Categorias: só as "en:", da mais geral à mais específica. */
   additives: string[]
   allergens: string[]
   traces: string[]
@@ -140,7 +140,8 @@ export class Product {
       additives: tags(raw.additives_tags),
       allergens: tags(raw.allergens_tags),
       traces: tags(raw.traces_tags),
-      categories: tags(raw.categories_tags),
+      // Só tags "en:" — são as aceitas no filtro categories_tags_en (a API também devolve texto solto).
+      categories: tags(raw.categories_tags?.filter((t) => t.startsWith('en:'))),
       countries: tags(raw.countries_tags),
     })
   }
