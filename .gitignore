@@ -41,6 +41,9 @@ Thumbs.db
 design/*
 !design/.gitkeep
 
+# Nomes de categorias gerados no build (npm run i18n:categories)
+public/i18n/categories/
+
 # Dumps de dados grandes (se forem baixados)
 data/*.jsonl
 data/*.jsonl.gz
