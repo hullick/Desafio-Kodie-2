@@ -5,7 +5,8 @@ import { CategoryFilter } from '../molecules/CategoryFilter'
 import { NovaFilter } from '../molecules/NovaFilter'
 import { NutriScoreFilter } from '../molecules/NutriScoreFilter'
 import { SortControl } from '../molecules/SortControl'
-import { ThresholdBar, type ThresholdBarProps } from '../molecules/ThresholdBar'
+import { ThresholdBar } from '../molecules/ThresholdBar'
+import type { ThresholdDef } from '../../config/thresholds'
 import { TipCard } from '../molecules/TipCard'
 
 export type FilterPanelProps = {
@@ -16,7 +17,8 @@ export type FilterPanelProps = {
   variant: 'inline' | 'sidebar'
   /** Ordenação (exibida no modo inline, ao lado da categoria). */
   sort?: { options: SelectOption[]; value: string; onChange: (v: string) => void }
-  thresholds?: ThresholdBarProps[]
+  /** Limiares nutricionais exibidos (valores em `value.thresholds`). */
+  thresholds?: ThresholdDef[]
   claims?: SelectOption[]
   tip?: { title: string; text: string }
 }
@@ -65,9 +67,25 @@ export function FilterPanel({ value, onChange, categories, variant, sort, thresh
         {thresholds.length > 0 && (
           <div className="space-y-3 py-space-sm">
             <h3 className="text-label-lg text-on-surface">Limiares Nutricionais</h3>
-            {thresholds.map((t) => (
-              <ThresholdBar key={t.label} {...t} />
-            ))}
+            {thresholds.map((t) => {
+              const current = value.thresholds[t.key]
+              const setThreshold = (patch: Partial<typeof current>) =>
+                set('thresholds', { ...value.thresholds, [t.key]: { ...current, ...patch } })
+              return (
+                <ThresholdBar
+                  key={t.key}
+                  label={t.label}
+                  unit={t.unit}
+                  min={t.min}
+                  max={t.max}
+                  step={t.step}
+                  value={current.max}
+                  enabled={current.enabled}
+                  onChange={(max) => setThreshold({ max })}
+                  onToggle={(enabled) => setThreshold({ enabled })}
+                />
+              )
+            })}
           </div>
         )}
 

@@ -7,6 +7,8 @@ import { ProductResults } from '../components/organisms/ProductResults'
 import { SearchHero } from '../components/organisms/SearchHero'
 import { PageTemplate } from '../components/templates/PageTemplate'
 import { HOME_CATEGORIES, offCategoryTag } from '../config/categories'
+import { THRESHOLDS } from '../config/thresholds'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useProductSearch } from '../hooks/useProductSearch'
 import { toProductCard } from '../lib/productCard'
 import type { Product } from '../models/Product'
@@ -15,6 +17,8 @@ import { SORT_OPTIONS, SUGGESTIONS } from './home.mock'
 
 const COMPARE_MAX = 4
 const PAGE_SIZE = 12
+/** Espera após mexer nos limiares antes de filtrar (o controle responde na hora). */
+const THRESHOLD_DELAY_MS = 500
 
 /** Sem nota vai para o fim na ordenação por Nutri-Score. */
 const gradeRank = (p: Product) => p.nutriscore ?? 'z'
@@ -31,20 +35,27 @@ export function Home() {
   // Só abrir a Home (catálogo em cache) ou buscar um texto vai à API. Categoria, Nutri-Score,
   // NOVA, ordenação e paginação filtram os produtos já carregados, sem novas requisições.
   const search = useProductSearch(term)
+  const thresholds = useDebouncedValue(filters.thresholds, THRESHOLD_DELAY_MS)
 
   const results = useMemo(() => {
     if (search.status !== 'success') return []
     const category = offCategoryTag(filters.category)
+    // Limiar ativo: só passa quem tem o valor informado e dentro do limite.
+    const limits = THRESHOLDS.filter((t) => thresholds[t.key].enabled)
     const list = search.page.products.filter(
       (p) =>
         (!category || p.categories.includes(category)) &&
+        limits.every((t) => {
+          const v = p.nutriments[t.field]
+          return v !== null && v <= thresholds[t.key].max
+        }) &&
         (filters.nutriscore.length === 0 || (p.nutriscore && filters.nutriscore.includes(p.nutriscore))) &&
         (filters.nova.length === 0 || (p.nova && filters.nova.includes(p.nova))),
     )
     if (sort === 'name') list.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'pt-BR'))
     if (sort === 'nutriscore') list.sort((a, b) => gradeRank(a).localeCompare(gradeRank(b)))
     return list
-  }, [search, filters.category, filters.nutriscore, filters.nova, sort])
+  }, [search, filters.category, filters.nutriscore, filters.nova, thresholds, sort])
 
   const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE))
   const pageItems = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -79,10 +90,7 @@ export function Home() {
             value={filters}
             onChange={changeFilters}
             categories={HOME_CATEGORIES}
-            thresholds={[
-              { label: 'Açúcares', valueLabel: '≤ 5g / 100g', percent: 25 },
-              { label: 'Sódio', valueLabel: 'Qualquer teor', percent: 100, active: false },
-            ]}
+            thresholds={THRESHOLDS}
             claims={[
               { value: 'sem-gluten', label: 'Sem glúten' },
               { value: 'vegano', label: 'Vegano' },
