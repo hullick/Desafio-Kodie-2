@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useEffect, useMemo } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import { Breadcrumbs } from '../components/molecules/Breadcrumbs'
 import { ProductActions } from '../components/molecules/ProductActions'
 import { Skeleton } from '../components/atoms/Skeleton'
@@ -12,6 +12,7 @@ import { PageTemplate } from '../components/templates/PageTemplate'
 import { toggleChecklist, useChecklist } from '../hooks/useChecklist'
 import { toggleFavorite, useFavoriteCodes } from '../hooks/useFavorites'
 import { useProductDetails } from '../hooks/useProductDetails'
+import { addRecentScan } from '../hooks/useRecentScans'
 import { useCategoryNames } from '../i18n/categoryNames'
 import { toAlternative, toProductDetail } from '../lib/productDetail'
 import { ProductNotFound } from './ProductNotFound'
@@ -26,6 +27,14 @@ export function ProductDetails() {
   const checklist = useChecklist()
   const details = useProductDetails(id)
   const categoryNames = useCategoryNames()
+  const { state } = useLocation()
+
+  // Aberto pelo scanner e encontrado: entra em "Escaneados recentemente".
+  const scanned = (state as { scanned?: boolean } | null)?.scanned === true
+  const scannedProduct = scanned && details.status === 'success' ? details.product : null
+  useEffect(() => {
+    if (scannedProduct) addRecentScan(scannedProduct)
+  }, [scannedProduct])
 
   const view = useMemo(() => {
     if (details.status !== 'success') return null

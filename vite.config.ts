@@ -20,5 +20,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    // O leitor de código de barras é importado sob demanda (só no scanner): sem isso, o Vite o descobre
+    // com o app aberto, re-empacota e a primeira abertura do scanner falha (504 Outdated Optimize Dep).
+    optimizeDeps: { include: ['zxing-wasm/reader'] },
   }
 })
