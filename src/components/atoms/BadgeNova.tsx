@@ -16,14 +16,34 @@ const SOLID: Record<NovaGroup, string> = {
   4: 'bg-nova-4',
 }
 
-/** pill → "• NOVA 1 · In natura" · square → número em quadrado colorido. */
+/**
+ * pill   → "• NOVA 1 · In natura"
+ * square → número em quadrado colorido (filtros)
+ * block  → bloco grande "4 / NOVA" (detalhe do produto)
+ */
 export type BadgeNovaProps = {
   group: NovaGroup
-  variant?: 'pill' | 'square'
+  variant?: 'pill' | 'square' | 'block'
   className?: string
 }
 
 export function BadgeNova({ group, variant = 'pill', className }: BadgeNovaProps) {
+  if (variant === 'block') {
+    return (
+      <span
+        className={cn(
+          'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl text-white shadow-sm',
+          SOLID[group],
+          className,
+        )}
+        aria-label={`NOVA ${group}`}
+      >
+        <span className="text-headline-lg leading-none font-extrabold">{group}</span>
+        <span className="text-[9px] font-bold tracking-wider uppercase">NOVA</span>
+      </span>
+    )
+  }
+
   if (variant === 'square') {
     return (
       <span

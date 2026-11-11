@@ -32,3 +32,26 @@ export const NOVA_LABEL: Record<NovaGroup, string> = {
   3: 'Processado',
   4: 'Ultraprocessado',
 }
+
+export const NOVA_DESCRIPTION: Record<NovaGroup, string> = {
+  1: 'Alimentos in natura ou minimamente processados, base de uma alimentação saudável.',
+  2: 'Ingredientes culinários (óleos, sal, açúcar) usados para preparar alimentos.',
+  3: 'Alimentos processados com adição de sal, açúcar ou óleo para durar mais.',
+  4: 'Formulações industriais ricas em aditivos, açúcares e aromatizantes.',
+}
+
+/** Texto do tom do grupo NOVA (cor do título). */
+export const NOVA_TEXT: Record<NovaGroup, string> = {
+  1: 'text-primary',
+  2: 'text-on-warning-container',
+  3: 'text-nova-3',
+  4: 'text-error',
+}
+
+export const NUTRI_VERDICT: Record<NutriGrade, string> = {
+  a: 'Qualidade nutricional muito alta',
+  b: 'Qualidade nutricional alta',
+  c: 'Qualidade nutricional intermediária',
+  d: 'Qualidade nutricional baixa',
+  e: 'Qualidade nutricional muito baixa',
+}
