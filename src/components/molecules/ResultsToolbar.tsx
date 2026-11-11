@@ -13,7 +13,8 @@ export type ResultsToolbarProps = {
 export function ResultsToolbar({ total, compareCount, compareMax, sort }: ResultsToolbarProps) {
   return (
     <div className="flex flex-col justify-between gap-4 rounded-2xl bg-surface-container-lowest p-4 shadow-sm md:flex-row md:items-center">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* O resumo é quem cede espaço (o selo do comparador quebra de linha); o ordenador mantém a largura. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2 md:flex-1">
         <span className="text-headline-sm text-on-surface">
           {total} {total === 1 ? 'produto analisado' : 'produtos analisados'}
         </span>
@@ -28,7 +29,7 @@ export function ResultsToolbar({ total, compareCount, compareMax, sort }: Result
           </>
         )}
       </div>
-      {sort}
+      {sort && <div className="min-w-0 md:shrink-0">{sort}</div>}
     </div>
   )
 }

@@ -184,6 +184,12 @@
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* O Tailwind 4 deixou de pôr a mãozinha nos botões; todo clicável do app mostra o cursor de link. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 @utility pb-safe {
