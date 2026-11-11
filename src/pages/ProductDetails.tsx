@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Breadcrumbs } from '../components/molecules/Breadcrumbs'
 import { ProductActions } from '../components/molecules/ProductActions'
@@ -9,6 +9,7 @@ import { IngredientsPanel } from '../components/organisms/IngredientsPanel'
 import { NutritionTable } from '../components/organisms/NutritionTable'
 import { SugarAlertCard } from '../components/organisms/SugarAlertCard'
 import { PageTemplate } from '../components/templates/PageTemplate'
+import { toggleFavorite, useFavoriteCodes } from '../hooks/useFavorites'
 import { useProductDetails } from '../hooks/useProductDetails'
 import { useCategoryNames } from '../i18n/categoryNames'
 import { toAlternative, toProductDetail } from '../lib/productDetail'
@@ -20,7 +21,7 @@ const SUGAR_HIGH = { '100g': 15, '100ml': 7.5 }
 export function ProductDetails() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const [saved, setSaved] = useState(false)
+  const favorites = useFavoriteCodes()
   const details = useProductDetails(id)
   const categoryNames = useCategoryNames()
 
@@ -49,9 +50,11 @@ export function ProductDetails() {
     else navigator.clipboard?.writeText(url)
   }
 
+  // `view` só existe com o produto carregado.
+  const product = details.status === 'success' ? details.product : null
   const actions = {
-    saved,
-    onToggleSave: () => setSaved((s) => !s),
+    saved: product !== null && favorites.has(product.code),
+    onToggleSave: () => product && toggleFavorite(product),
     onShare: share,
     alternativesHref,
   }

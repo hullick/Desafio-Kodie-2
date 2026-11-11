@@ -11,6 +11,7 @@ import { SEARCH_PARAM, SEARCH_SUGGESTIONS } from '../config/search'
 import { THRESHOLDS } from '../config/thresholds'
 import { COMPARE_MAX, setCompareList, useCompareList } from '../hooks/useCompareList'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { toggleFavorite, useFavoriteCodes } from '../hooks/useFavorites'
 import { useProductSearch } from '../hooks/useProductSearch'
 import { useCategoryNames } from '../i18n/categoryNames'
 import { buildCategoryOptions } from '../lib/categoryOptions'
@@ -49,7 +50,7 @@ export function Home() {
     category: searchParams.get(CATEGORY_PARAM) ?? '',
   }))
   const [sort, setSort] = useState('relevance')
-  const [favorites, setFavorites] = useState<string[]>([])
+  const favorites = useFavoriteCodes()
   // Seleção para comparar: a mesma lista guardada que o comparador usa (volta ao reabrir o app).
   const compare = useCompareList()
 
@@ -163,8 +164,8 @@ export function Home() {
                 ...toProductCard(p),
                 id: p.code,
                 href: `/produto/${p.code}`,
-                favorite: favorites.includes(p.code),
-                onToggleFavorite: () => setFavorites((f) => toggle(f, p.code)),
+                favorite: favorites.has(p.code),
+                onToggleFavorite: () => toggleFavorite(p),
                 compare: {
                   checked: compare.includes(p.code),
                   onChange: () => setCompareList(toggle(compare, p.code)),
