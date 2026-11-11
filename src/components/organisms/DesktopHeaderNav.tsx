@@ -1,6 +1,5 @@
 import { NAV_ITEMS, SCAN_HREF, type NavId } from '../../config/navigation'
 import { cn } from '../../lib/cn'
-import { Avatar } from '../atoms/Avatar'
 import { Button } from '../atoms/Button'
 import { Logo } from '../atoms/Logo'
 
@@ -8,11 +7,10 @@ export type DesktopHeaderNavProps = {
   activeId?: NavId
   /** Abre o modal de busca (lupa). Sem ele, a lupa não aparece (ex.: Home, que tem a própria busca). */
   onOpenSearch?: () => void
-  avatarUrl?: string
 }
 
-/** Cabeçalho fixo desktop: logo, links, CTA Escanear, lupa de busca e perfil. */
-export function DesktopHeaderNav({ activeId, onOpenSearch, avatarUrl }: DesktopHeaderNavProps) {
+/** Cabeçalho fixo desktop: logo, links, CTA Escanear, e lupa de busca. */
+export function DesktopHeaderNav({ activeId, onOpenSearch }: DesktopHeaderNavProps) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 w-full bg-surface/90 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-[1200px] items-center justify-between gap-gutter px-margin-lg">
@@ -46,9 +44,6 @@ export function DesktopHeaderNav({ activeId, onOpenSearch, avatarUrl }: DesktopH
           {onOpenSearch && (
             <Button variant="ghost" icon="search" iconOnly aria-label="Buscar alimentos" onClick={onOpenSearch} className="rounded-xl" />
           )}
-          <a href="/perfil" aria-label="Perfil" className="ml-1">
-            <Avatar src={avatarUrl} />
-          </a>
         </div>
       </div>
     </header>
