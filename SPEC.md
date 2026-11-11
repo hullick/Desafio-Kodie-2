@@ -140,8 +140,8 @@ Telas: Busca/Home, Detalhes do produto, Comparação, Scanner, Favoritos, estado
 
 ## 12. Arquitetura técnica
 - **React + Vite + TypeScript** (template `react-ts`).
-- **UI:** Bootstrap via `react-bootstrap` (decisão do autor) + CSS próprio pequeno para a
-  identidade visual (selos Nutri-Score, cores).
+- **UI:** Tailwind CSS v4 via `@tailwindcss/vite` (decisão do autor; substitui o Bootstrap),
+  com cores e tokens do design definidos no tema do Tailwind.
 - **Bibliotecas (a avaliar por uso):** `react-router` (telas), `html5-qrcode` ou
   `@zxing/browser` (código de barras), `recharts` (gráficos de comparação, opcional).
 - **Estado:** `useState`/`useEffect` e Context para favoritos e itens em comparação
