@@ -7,6 +7,10 @@
  * Só entram tags "en:" (as que o app usa); a chave fica sem o prefixo, como em Product.categories.
  * Correções manuais em i18n/overrides/<locale>.json têm prioridade sobre a taxonomia.
  *
+ * Também gera public/i18n/categories/aliases.json: { "pt:bebida": "beverages", ... }. Alguns
+ * produtos só têm categorias em texto solto (ex.: "pt:Bebida"); o app as converte na tag "en:"
+ * pelo nome no idioma, normalizado (ver `categoryAliasKey` em src/i18n/categoryAliases.ts).
+ *
  * Roda sozinho no build (`prebuild`) e no dev (`predev`, só se os arquivos não existirem).
  * Os arquivos gerados não são versionados; as correções manuais são.
  *
@@ -56,9 +60,29 @@ async function loadTaxonomy(path) {
 
 const exists = (file) => access(file).then(() => true, () => false)
 const outFile = (locale) => join(OUT_DIR, `${locale}.json`)
+const ALIASES_FILE = join(OUT_DIR, 'aliases.json')
+
+/** Idiomas das categorias em texto solto convertidas pelo nome (produtos do Brasil vêm em pt). */
+const ALIAS_LANGS = ['pt', 'es']
+
+/**
+ * Chave de comparação de nomes: sem acento, minúsculas, palavras com "-" e sem o "s" final das
+ * palavras com mais de 3 letras ("Bebida" e "Bebidas" → "bebida").
+ * Igual a `categoryAliasKey` em src/i18n/categoryAliases.ts — manter as duas em sincronia.
+ */
+const aliasKey = (name) =>
+  name
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => (w.length > 3 ? w.replace(/s$/, '') : w))
+    .join('-')
 
 async function allOutputsExist() {
-  const checks = await Promise.all(Object.keys(LOCALES).map((l) => exists(outFile(l))))
+  const files = [...Object.keys(LOCALES).map(outFile), ALIASES_FILE]
+  const checks = await Promise.all(files.map(exists))
   return checks.every(Boolean)
 }
 
@@ -97,6 +121,9 @@ try {
 }
 await mkdir(OUT_DIR, { recursive: true })
 
+/** Nomes finais (com correções) por idioma da taxonomia, para os aliases. */
+const namesByLang = {}
+
 for (const [locale, lang] of Object.entries(LOCALES)) {
   const names = {}
   for (const [id, entry] of Object.entries(taxonomy)) {
@@ -106,9 +133,22 @@ for (const [locale, lang] of Object.entries(LOCALES)) {
   }
   const overrides = await loadOverrides(locale)
   Object.assign(names, overrides)
+  namesByLang[lang] = names
 
   const sorted = Object.fromEntries(Object.entries(names).sort(([a], [b]) => a.localeCompare(b)))
   const json = JSON.stringify(sorted)
   await writeFile(outFile(locale), json + '\n')
   console.log(`[i18n] ${locale}: ${Object.keys(sorted).length} nomes (${Object.keys(overrides).length} correções) → ${(json.length / 1024).toFixed(0)} KB`)
 }
+
+// Nome no idioma → tag "en:". Nomes repetidos em tags diferentes: fica a primeira na ordem da taxonomia.
+const aliases = {}
+for (const lang of ALIAS_LANGS) {
+  for (const [tag, name] of Object.entries(namesByLang[lang] ?? {})) {
+    const key = aliasKey(name)
+    if (key && !aliases[`${lang}:${key}`]) aliases[`${lang}:${key}`] = tag
+  }
+}
+const aliasesJson = JSON.stringify(aliases)
+await writeFile(ALIASES_FILE, aliasesJson + '\n')
+console.log(`[i18n] aliases: ${Object.keys(aliases).length} nomes → ${(aliasesJson.length / 1024).toFixed(0)} KB`)

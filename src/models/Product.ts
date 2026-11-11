@@ -48,6 +48,8 @@ export type ProductData = {
   allergens: string[]
   traces: string[]
   categories: string[]
+  /** Categorias em texto solto, com o idioma (ex.: "pt:Bebida"). A API não as liga à taxonomia. */
+  localCategories: string[]
   countries: string[]
 }
 
@@ -101,6 +103,7 @@ export class Product {
   readonly allergens: string[]
   readonly traces: string[]
   readonly categories: string[]
+  readonly localCategories: string[]
   readonly countries: string[]
 
   constructor(data: ProductData) {
@@ -120,6 +123,7 @@ export class Product {
     this.allergens = data.allergens
     this.traces = data.traces
     this.categories = data.categories
+    this.localCategories = data.localCategories
     this.countries = data.countries
   }
 
@@ -142,6 +146,7 @@ export class Product {
       traces: tags(raw.traces_tags),
       // Só tags "en:" — são as aceitas no filtro categories_tags_en (a API também devolve texto solto).
       categories: tags(raw.categories_tags?.filter((t) => t.startsWith('en:'))),
+      localCategories: (raw.categories_tags ?? []).filter((t) => /^[a-z]{2,3}:/.test(t) && !t.startsWith('en:')),
       countries: tags(raw.countries_tags),
     })
   }

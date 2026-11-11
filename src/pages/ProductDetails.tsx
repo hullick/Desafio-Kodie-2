@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { Breadcrumbs } from '../components/molecules/Breadcrumbs'
 import { ProductActions } from '../components/molecules/ProductActions'
+import { Skeleton } from '../components/atoms/Skeleton'
 import { FoodHeroCard } from '../components/organisms/FoodHeroCard'
 import { HealthierAlternatives } from '../components/organisms/HealthierAlternatives'
 import { IngredientsPanel } from '../components/organisms/IngredientsPanel'
 import { NutritionTable } from '../components/organisms/NutritionTable'
 import { SugarAlertCard } from '../components/organisms/SugarAlertCard'
 import { PageTemplate } from '../components/templates/PageTemplate'
+import { useProductDetails } from '../hooks/useProductDetails'
+import { useCategoryNames } from '../i18n/categoryNames'
+import { toAlternative, toProductDetail } from '../lib/productDetail'
 import { ProductNotFound } from './ProductNotFound'
-import { getMockProductDetail } from './product.mock'
 
 /** Limite de "alto em açúcar adicionado" da ANVISA (RDC 429/2020) por 100 g / 100 ml. */
 const SUGAR_HIGH = { '100g': 15, '100ml': 7.5 }
@@ -18,13 +21,27 @@ export function ProductDetails() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
   const [saved, setSaved] = useState(false)
-  const product = getMockProductDetail(id)
+  const details = useProductDetails(id)
+  const categoryNames = useCategoryNames()
 
-  if (!product) return <ProductNotFound barcode={id} />
+  const view = useMemo(() => {
+    if (details.status !== 'success') return null
+    const { product } = details
+    const alts = details.alternatives
+    return {
+      ...toProductDetail(product, categoryNames),
+      // Só aparece depois de buscar: carregando ou com falha (ex.: limite da API), fica oculta.
+      alternatives: alts.status === 'ready' ? alts.list.map((alt) => toAlternative(alt, product)) : null,
+      alternativesMode: product.nutriscore ? ('healthier' as const) : ('similar' as const),
+    }
+  }, [details, categoryNames])
 
-  const { hero, unit, sugarGrams, nutrition, ingredients, allergens, alternatives, category } = product
+  if (details.status === 'not-found') return <ProductNotFound barcode={id} />
+  if (!view) return <ProductDetailsLoading failed={details.status === 'error'} onBack={() => navigate(-1)} />
+
+  const { hero, unit, sugarGrams, nutrition, ingredients, allergens, alternatives, alternativesMode, category } = view
   const showSugarAlert = sugarGrams !== undefined && sugarGrams >= SUGAR_HIGH[unit]
-  const alternativesHref = `/comparar?ids=${[id, ...alternatives.map((a) => a.id)].join(',')}`
+  const alternativesHref = `/comparar?ids=${[id, ...(alternatives ?? []).map((a) => a.id)].join(',')}`
 
   const share = () => {
     const url = window.location.href
@@ -70,7 +87,36 @@ export function ProductDetails() {
           </div>
         </div>
 
-        {alternatives.length > 0 && <HealthierAlternatives items={alternatives} compareHref={alternativesHref} />}
+        {alternatives && (
+          <HealthierAlternatives items={alternatives} compareHref={alternativesHref} mode={alternativesMode} />
+        )}
+      </div>
+    </PageTemplate>
+  )
+}
+
+/** Carregando o produto (ou erro sem tela própria): mesmo esqueleto da página. */
+function ProductDetailsLoading({ failed, onBack }: { failed: boolean; onBack: () => void }) {
+  return (
+    <PageTemplate activeNav="home" mobile={{ mode: 'stack', title: 'Detalhes do alimento', onBack }}>
+      <div className="flex flex-col gap-space-lg px-margin py-space-md lg:px-0 lg:py-space-xl" aria-busy={!failed}>
+        {failed ? (
+          <p className="rounded-2xl bg-surface-container-lowest p-space-lg text-center text-body-md text-on-surface-variant shadow-sm">
+            Não foi possível carregar o produto. Tente novamente.
+          </p>
+        ) : (
+          <>
+            <span className="sr-only">Carregando produto...</span>
+            <Skeleton shimmer className="h-64 w-full rounded-2xl" />
+            <div className="grid grid-cols-1 gap-space-lg lg:grid-cols-12 lg:gap-gutter-lg">
+              <Skeleton className="hidden h-72 rounded-2xl lg:col-span-5 lg:block" />
+              <div className="flex flex-col gap-space-lg lg:col-span-7">
+                <Skeleton className="h-48 w-full rounded-2xl" />
+                <Skeleton tone="soft" className="h-32 w-full rounded-2xl" />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </PageTemplate>
   )

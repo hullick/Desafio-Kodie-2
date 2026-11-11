@@ -14,7 +14,7 @@ import { ResponseCache } from './ResponseCache'
  * 1. getProduct          → GET /api/v3/product/{code}
  * 2. searchProducts      → GET /cgi/search.pl (com texto) ou /api/v2/search (só filtros)
  * 3. getProductsByCodes  → GET /api/v2/search?code=a,b,c
- * 4. getAlternatives     → GET /api/v2/search (mesma categoria, Nutri-Score melhor)
+ * 4. getAlternatives     → catálogo em cache ou GET /api/v2/search (mesma categoria, Nutri-Score melhor)
  * 5. getCatalog          → GET /api/v2/search (várias categorias, catálogo base da Home)
  * Toda busca/listagem filtra por Brasil por padrão (`country: null` desliga).
  */
@@ -179,34 +179,79 @@ export async function getProductsByCodes(codes: string[], { signal }: RequestOpt
   return wanted.map((code) => found.get(code)).filter((p): p is Product => Boolean(p))
 }
 
+/** Categorias consideradas nas alternativas: as N mais específicas do produto. */
+const ALTERNATIVE_CATEGORIES = 3
+/** Candidatos buscados para escolher os melhores localmente (a API só ordena por Nutri-Score). */
+const ALTERNATIVE_POOL = 24
+
+/** Sem NOVA vai para o fim. */
+const novaRank = (p: Product) => p.nova ?? 5
+
 /**
- * 4. Alternativas mais saudáveis: mesma categoria (a mais específica), Nutri-Score melhor
- * que o do produto (ou A/B se ele não tiver nota), ordenadas por Nutri-Score.
+ * 4. Alternativas mais saudáveis: produtos de qualquer uma das categorias mais específicas do
+ * produto, com Nutri-Score melhor que o dele (sem nota: qualquer nota) e a mesma base
+ * (sólido ou líquido). Ficam os de melhor Nutri-Score e, no empate, melhor NOVA.
+ * - `categories` substitui as do produto (ex.: convertidas de texto solto); da geral à específica.
+ * - `pool`: produtos já carregados (ex.: catálogo da Home em cache). Se houver `limit` candidatos
+ *   neles, não há requisição; senão, uma busca (uma requisição, "|" = "ou").
  */
 export async function getAlternatives(
   product: Product,
-  { limit = 6, country, signal }: RequestOptions & { limit?: number; country?: string | null } = {},
+  {
+    limit = 3,
+    country,
+    categories: override,
+    pool,
+    signal,
+  }: RequestOptions & { limit?: number; country?: string | null; categories?: string[]; pool?: Product[] } = {},
 ): Promise<Product[]> {
-  const category = product.categories.at(-1)
-  if (!category) return []
+  const categories = (override ?? product.categories).slice(-ALTERNATIVE_CATEGORIES)
+  if (categories.length === 0) return []
 
-  const index = product.nutriscore ? NUTRI_GRADES.indexOf(product.nutriscore) : 2
-  const better = NUTRI_GRADES.slice(0, Math.max(1, index))
+  // Sem nota não há "melhor": vale qualquer nota, e a ordenação põe as melhores primeiro.
+  const better = product.nutriscore
+    ? NUTRI_GRADES.slice(0, Math.max(1, NUTRI_GRADES.indexOf(product.nutriscore)))
+    : [...NUTRI_GRADES]
+
+  const pick = (candidates: Product[]) =>
+    candidates
+      // Mesma base (sólido × líquido): barra erros de categoria da base colaborativa (ex.: ervilha
+      // congelada marcada como bebida) e mantém a comparação por 100 g ou 100 ml coerente.
+      .filter(
+        (p) =>
+          p.code !== product.code && p.nutriscore && better.includes(p.nutriscore) && p.basis === product.basis,
+      )
+      .sort((a, b) => a.nutriscore!.localeCompare(b.nutriscore!) || novaRank(a) - novaRank(b))
+      .slice(0, limit)
+
+  if (pool) {
+    const local = pick(pool.filter((p) => p.categories.some((c) => categories.includes(c))))
+    if (local.length >= limit) return local
+  }
 
   const page = await searchProducts(
-    { category, nutriscore: better, sort: 'nutriscore', pageSize: limit + 1, country },
+    { category: categories.join('|'), nutriscore: better, sort: 'nutriscore', pageSize: ALTERNATIVE_POOL, country },
     { signal },
   )
-  return page.products.filter((p) => p.code !== product.code).slice(0, limit)
+  return pick(page.products)
 }
+
+/** Catálogo base já em cache, sem requisição (undefined se não houver ou tiver expirado). */
+export function peekCatalog(categories: string[], pageSize: number): Product[] | undefined {
+  const cached = catalogCache.get(catalogUrl(categories, pageSize))
+  return cached && fromPageData(cached).products
+}
+
+const catalogUrl = (categories: string[], pageSize: number) =>
+  // Na v2, "|" significa "ou".
+  buildSearchUrl({ category: categories.join('|'), pageSize })
 
 /**
  * 5. Catálogo base: produtos de qualquer uma das categorias (tags em inglês) numa requisição só.
  * Fica em cache por CACHE_TTL_MS no localStorage; filtros e ordenação são aplicados na interface.
  */
 export async function getCatalog(categories: string[], pageSize: number, { signal }: RequestOptions = {}): Promise<SearchPage> {
-  // Na v2, "|" significa "ou".
-  const url = buildSearchUrl({ category: categories.join('|'), pageSize })
+  const url = catalogUrl(categories, pageSize)
   const cached = catalogCache.get(url)
   if (cached) return fromPageData(cached)
 
