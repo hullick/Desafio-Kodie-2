@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
-import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { Pagination, type PaginationProps } from '../molecules/Pagination'
 import { ResultsToolbar } from '../molecules/ResultsToolbar'
-import { ProductCard, type ProductCardProps } from './ProductCard'
+import { ProductGrid, type ProductGridItem } from './ProductGrid'
 
 export type ProductResultsProps = {
-  products: Array<Omit<ProductCardProps, 'layout'> & { id: string }>
+  products: ProductGridItem[]
   total: number
   compareCount: number
   compareMax: number
@@ -16,24 +15,14 @@ export type ProductResultsProps = {
   empty?: ReactNode
 }
 
-/** Lista de resultados: barra de totais, cards (lista no mobile, grade no desktop) e paginação. */
+/** Resultados da busca: barra de totais, grade de cards e paginação. */
 export function ProductResults({ products, total, compareCount, compareMax, sort, pagination, empty }: ProductResultsProps) {
-  const isGrid = useMediaQuery('(min-width: 768px)')
-
   return (
     <section aria-label="Resultados de alimentos encontrados" className="flex w-full flex-col gap-space-md">
       <div className="hidden md:block">
         <ResultsToolbar total={total} compareCount={compareCount} compareMax={compareMax} sort={sort} />
       </div>
-      {products.length === 0 ? (
-        empty
-      ) : (
-        <div className="flex flex-col gap-space-md md:grid md:grid-cols-2 md:gap-gutter-md xl:grid-cols-3">
-          {products.map(({ id, ...card }) => (
-            <ProductCard key={id} {...card} layout={isGrid ? 'column' : 'row'} />
-          ))}
-        </div>
-      )}
+      {products.length === 0 ? empty : <ProductGrid products={products} />}
       {pagination && <Pagination {...pagination} />}
     </section>
   )
