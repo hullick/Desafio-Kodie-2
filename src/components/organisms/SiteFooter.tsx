@@ -1,9 +1,13 @@
+import { SUPPORT_HREF, SUPPORT_URL } from '../../config/links'
 import { Logo } from '../atoms/Logo'
 
-const LINKS = [
+type FooterLink = { label: string; href: string; external?: boolean }
+
+const LINKS: FooterLink[] = [
   { label: 'Sobre a Metodologia', href: '/sobre' },
   { label: 'Privacidade', href: '/privacidade' },
-  { label: 'Suporte', href: '/ajuda' },
+  // Suporte = abrir uma issue no GitHub (VITE_SUPPORT_URL); sem a variável, aponta para "#".
+  { label: 'Suporte', href: SUPPORT_HREF, external: SUPPORT_URL !== null },
 ]
 
 /** Rodapé institucional (desktop). */
@@ -20,7 +24,12 @@ export function SiteFooter() {
           </div>
           <nav aria-label="Institucional" className="flex items-center gap-space-lg text-label-md text-on-surface-variant">
             {LINKS.map((l) => (
-              <a key={l.href} href={l.href} className="transition-colors hover:text-primary">
+              <a
+                key={l.href}
+                href={l.href}
+                {...(l.external && { target: '_blank', rel: 'noopener noreferrer' })}
+                className="transition-colors hover:text-primary"
+              >
                 {l.label}
               </a>
             ))}

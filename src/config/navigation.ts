@@ -1,4 +1,5 @@
-export type NavId = 'home' | 'scan' | 'compare' | 'favorites' | 'help'
+/** `scan` não está em NAV_ITEMS (o scanner é o botão de destaque), mas marca a aba ativa nele. */
+export type NavId = 'home' | 'scan' | 'compare' | 'favorites'
 
 export type NavItem = {
   id: NavId
@@ -14,8 +15,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'home', label: 'Início / Explorar', shortLabel: 'Início', href: '/', icon: 'home' },
   { id: 'compare', label: 'Comparador', shortLabel: 'Comparar', href: '/comparar', icon: 'compare_arrows' },
   { id: 'favorites', label: 'Meus Favoritos', shortLabel: 'Favoritos', href: '/favoritos', icon: 'favorite' },
-  { id: 'scan', label: 'Escanear EAN', shortLabel: 'Escanear', href: '/scanner', icon: 'barcode_scanner' },
-  { id: 'help', label: 'Ajuda', shortLabel: 'Ajuda', href: '/ajuda', icon: 'help' },
 ]
 
 export const SCAN_HREF = '/scanner'
