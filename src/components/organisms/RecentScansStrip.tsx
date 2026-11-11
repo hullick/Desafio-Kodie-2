@@ -20,7 +20,7 @@ export function RecentScansStrip({ items, onClear, title = 'Escaneados recenteme
           Limpar
         </button>
       </div>
-      <div className="no-scrollbar -mx-gutter flex items-stretch gap-space-sm overflow-x-auto scroll-smooth px-gutter pb-2">
+      <div className="no-scrollbar -mx-gutter flex items-stretch gap-space-sm overflow-x-auto scroll-smooth px-gutter pb-2 lg:mx-0 lg:px-0">
         {items.map(({ id, ...item }) => (
           <div key={id} className="min-w-[240px]">
             <ProductCardCompact {...item} />
