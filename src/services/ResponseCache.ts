@@ -1,5 +1,31 @@
 type Entry<T> = { value: T; expiresAt: number }
 
+/**
+ * Versão do formato dos dados guardados. Mudou o formato (ex.: campo novo em ProductData)?
+ * Aumente: o que foi gravado antes é ignorado e apagado, em vez de chegar incompleto à interface.
+ */
+const CACHE_VERSION = 2
+const ROOT_PREFIX = 'scanbite:'
+const VERSION_PREFIX = `${ROOT_PREFIX}v${CACHE_VERSION}:`
+
+/** Apaga chaves de versões anteriores do cache (uma vez por carga do app). */
+function purgeOldVersions(): void {
+  for (const storage of [() => sessionStorage, () => localStorage]) {
+    try {
+      const s = storage()
+      const old: string[] = []
+      for (let i = 0; i < s.length; i++) {
+        const key = s.key(i)
+        if (key?.startsWith(ROOT_PREFIX) && !key.startsWith(VERSION_PREFIX)) old.push(key)
+      }
+      old.forEach((key) => s.removeItem(key))
+    } catch {
+      /* sem armazenamento */
+    }
+  }
+}
+purgeOldVersions()
+
 /** session → só a aba atual (sobrevive a recarregar) · local → todas as abas e reaberturas do app. */
 export type CacheStorage = 'session' | 'local'
 
@@ -14,7 +40,7 @@ export class ResponseCache<T> {
   private readonly memory = new Map<string, Entry<T>>()
 
   constructor(namespace: string, ttlMs: number, storage: CacheStorage = 'session') {
-    this.prefix = `scanbite:${namespace}:`
+    this.prefix = `${VERSION_PREFIX}${namespace}:`
     this.ttlMs = ttlMs
     this.storageKind = storage
   }
