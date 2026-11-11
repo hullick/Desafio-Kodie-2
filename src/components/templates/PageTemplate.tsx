@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { NavId } from '../../config/navigation'
+import { useCompareList } from '../../hooks/useCompareList'
 import { cn } from '../../lib/cn'
 import { DesktopHeaderNav } from '../organisms/DesktopHeaderNav'
 import { MobileBottomTabNav } from '../organisms/MobileBottomTabNav'
@@ -15,6 +16,7 @@ export type MobileMode = { mode: 'tab' } | { mode: 'stack'; title: string; onBac
 
 export type PageTemplateProps = {
   activeNav?: NavId
+  /** Contador do item "Comparar" no menu. Padrão: tamanho da lista de comparação guardada. */
   compareCount?: number
   mobile?: MobileMode
   /** Esconde a lupa do cabeçalho (a Home tem a própria busca). */
@@ -31,13 +33,14 @@ export type PageTemplateProps = {
  */
 export function PageTemplate({
   activeNav,
-  compareCount = 0,
+  compareCount,
   mobile = { mode: 'tab' },
   hideSearch = false,
   fullWidth = false,
   children,
 }: PageTemplateProps) {
   const [searchOpen, setSearchOpen] = useState(false)
+  const compareList = useCompareList()
   const openSearch = hideSearch ? undefined : () => setSearchOpen(true)
 
   return (
@@ -64,7 +67,7 @@ export function PageTemplate({
 
       <div className="lg:hidden">
         {mobile.mode === 'tab' ? (
-          <MobileBottomTabNav activeId={activeNav} compareCount={compareCount} />
+          <MobileBottomTabNav activeId={activeNav} compareCount={compareCount ?? compareList.length} />
         ) : (
           mobile.dock && (
             <div className="pb-safe fixed inset-x-0 bottom-0 z-50 bg-surface-container-lowest/90 p-4 shadow-[0_-2px_12px_rgba(15,23,42,0.05)] backdrop-blur-xl">

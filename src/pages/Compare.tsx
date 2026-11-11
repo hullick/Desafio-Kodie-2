@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { BadgeNova } from '../components/atoms/BadgeNova'
 import { BadgeNutriScore } from '../components/atoms/BadgeNutriScore'
@@ -13,6 +13,7 @@ import { NutritionalVerdictCard, type VerdictInsight } from '../components/organ
 import { RelatedProductsGrid } from '../components/organisms/RelatedProductsGrid'
 import { PageTemplate } from '../components/templates/PageTemplate'
 import { useCatalog } from '../hooks/useCatalog'
+import { COMPARE_MAX, setCompareList, useCompareList } from '../hooks/useCompareList'
 import { useCompareProducts } from '../hooks/useCompareProducts'
 import { useCategoryNames } from '../i18n/categoryNames'
 import { isValidBarcode, normalizeBarcode } from '../lib/barcode'
@@ -26,8 +27,6 @@ import {
   type CompareNutrients,
 } from '../lib/compareProducts'
 import type { CompareTone } from '../types/comparison'
-
-const COMPARE_MAX = 5
 
 type Metric = { key: keyof CompareNutrients; label: string; unit: string; lowerIsBetter: boolean }
 
@@ -65,8 +64,23 @@ function parseIds(raw: string | null): string[] {
 export function Compare() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const ids = parseIds(params.get('ids'))
-  const setIds = (next: string[]) => setParams(next.length ? { ids: next.join(',') } : {}, { replace: true })
+  const stored = useCompareList()
+  // ?ids= na URL (link da Home, dos detalhes, compartilhado) manda; sem ele (menu "Comparador"),
+  // volta a última comparação guardada no aparelho.
+  const fromUrl = params.get('ids')
+  const ids = parseIds(fromUrl ?? stored.join(','))
+  const key = ids.join(',')
+
+  useEffect(() => {
+    if (fromUrl !== null) setCompareList(key ? key.split(',') : [])
+    else if (key) setParams({ ids: key }, { replace: true })
+  }, [fromUrl, key, setParams])
+
+  /** Remover/limpar: atualiza a URL e a lista guardada juntas. */
+  const setIds = (next: string[]) => {
+    setCompareList(next)
+    setParams(next.length ? { ids: next.join(',') } : {}, { replace: true })
+  }
 
   const state = useCompareProducts(ids)
   const catalog = useCatalog()

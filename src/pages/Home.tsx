@@ -9,6 +9,7 @@ import { SearchHero } from '../components/organisms/SearchHero'
 import { PageTemplate } from '../components/templates/PageTemplate'
 import { SEARCH_PARAM, SEARCH_SUGGESTIONS } from '../config/search'
 import { THRESHOLDS } from '../config/thresholds'
+import { COMPARE_MAX, setCompareList, useCompareList } from '../hooks/useCompareList'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useProductSearch } from '../hooks/useProductSearch'
 import { useCategoryNames } from '../i18n/categoryNames'
@@ -18,7 +19,6 @@ import type { Product } from '../models/Product'
 import { EMPTY_FILTERS, type FilterState } from '../types/filters'
 import { SORT_OPTIONS } from './home.mock'
 
-const COMPARE_MAX = 4
 const PAGE_SIZE = 12
 /** Espera após mexer nos limiares antes de filtrar (o controle responde na hora). */
 const THRESHOLD_DELAY_MS = 500
@@ -50,7 +50,8 @@ export function Home() {
   }))
   const [sort, setSort] = useState('relevance')
   const [favorites, setFavorites] = useState<string[]>([])
-  const [compare, setCompare] = useState<string[]>([])
+  // Seleção para comparar: a mesma lista guardada que o comparador usa (volta ao reabrir o app).
+  const compare = useCompareList()
 
   // Só abrir a Home (catálogo em cache) ou buscar um texto vai à API. Categoria, Nutri-Score,
   // NOVA, ordenação e paginação filtram os produtos já carregados, sem novas requisições.
@@ -166,7 +167,7 @@ export function Home() {
                 onToggleFavorite: () => setFavorites((f) => toggle(f, p.code)),
                 compare: {
                   checked: compare.includes(p.code),
-                  onChange: () => setCompare((c) => toggle(c, p.code)),
+                  onChange: () => setCompareList(toggle(compare, p.code)),
                   selectedCount: compare.length,
                   max: COMPARE_MAX,
                 },
@@ -192,7 +193,7 @@ export function Home() {
       <CompareTray
         count={compare.length}
         lastItem={lastCompared && { name: lastCompared.name ?? 'Produto', imageUrl: lastCompared.imageSmallUrl ?? undefined }}
-        onClear={() => setCompare([])}
+        onClear={() => setCompareList([])}
         compareHref={`/comparar?ids=${compare.join(',')}`}
       />
     </PageTemplate>
