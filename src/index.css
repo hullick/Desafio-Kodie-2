@@ -137,6 +137,16 @@
 
   /* Animações */
   --animate-scan-laser: scan-laser 2.2s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s infinite;
+
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
 
   @keyframes scan-laser {
     0%,
@@ -153,6 +163,10 @@
   .animate-scan-laser {
     animation: none;
     top: 50%;
+  }
+  .animate-shimmer,
+  .animate-pulse {
+    animation: none;
   }
 }
 
