@@ -15,6 +15,7 @@ import { ResponseCache } from './ResponseCache'
  * 2. searchProducts      → GET /cgi/search.pl (com texto) ou /api/v2/search (só filtros)
  * 3. getProductsByCodes  → GET /api/v2/search?code=a,b,c
  * 4. getAlternatives     → GET /api/v2/search (mesma categoria, Nutri-Score melhor)
+ * 5. getCatalog          → GET /api/v2/search (várias categorias, catálogo base da Home)
  * Toda busca/listagem filtra por Brasil por padrão (`country: null` desliga).
  */
 
@@ -45,6 +46,8 @@ const productCache = new ResponseCache<ProductData>('product', CACHE_TTL_MS)
 /** Códigos já consultados que não existem (guarda o `result.id` da API). */
 const missingCache = new ResponseCache<string>('missing', CACHE_TTL_MS)
 const searchCache = new ResponseCache<SearchPageData>('search', CACHE_TTL_MS)
+/** Catálogo da Home no localStorage: reabrir o app (até em outra aba) não gasta requisição. */
+const catalogCache = new ResponseCache<SearchPageData>('catalog', CACHE_TTL_MS, 'local')
 
 const FIELDS = PRODUCT_FIELDS.join(',')
 
@@ -195,4 +198,21 @@ export async function getAlternatives(
     { signal },
   )
   return page.products.filter((p) => p.code !== product.code).slice(0, limit)
+}
+
+/**
+ * 5. Catálogo base: produtos de qualquer uma das categorias (tags em inglês) numa requisição só.
+ * Fica em cache por CACHE_TTL_MS no localStorage; filtros e ordenação são aplicados na interface.
+ */
+export async function getCatalog(categories: string[], pageSize: number, { signal }: RequestOptions = {}): Promise<SearchPage> {
+  // Na v2, "|" significa "ou".
+  const url = buildSearchUrl({ category: categories.join('|'), pageSize })
+  const cached = catalogCache.get(url)
+  if (cached) return fromPageData(cached)
+
+  const raw = await getJson<OffSearchResponseV2>(url, { limiter: searchLimiter, signal })
+  const page = SearchPage.fromApi(raw)
+  remember(page.products)
+  catalogCache.set(url, toPageData(page))
+  return page
 }

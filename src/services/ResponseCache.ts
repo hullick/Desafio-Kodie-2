@@ -1,17 +1,27 @@
 type Entry<T> = { value: T; expiresAt: number }
 
+/** session → só a aba atual (sobrevive a recarregar) · local → todas as abas e reaberturas do app. */
+export type CacheStorage = 'session' | 'local'
+
 /**
- * Cache com validade: memória + sessionStorage (sobrevive a recarregar a página na mesma aba).
- * Falhas do sessionStorage (modo privado, cota cheia) são ignoradas: fica só a memória.
+ * Cache com validade: memória + sessionStorage/localStorage.
+ * Falhas do armazenamento (modo privado, cota cheia) são ignoradas: fica só a memória.
  */
 export class ResponseCache<T> {
   private readonly prefix: string
   private readonly ttlMs: number
+  private readonly storageKind: CacheStorage
   private readonly memory = new Map<string, Entry<T>>()
 
-  constructor(namespace: string, ttlMs: number) {
+  constructor(namespace: string, ttlMs: number, storage: CacheStorage = 'session') {
     this.prefix = `scanbite:${namespace}:`
     this.ttlMs = ttlMs
+    this.storageKind = storage
+  }
+
+  /** Lido a cada uso: o acesso pode lançar erro (ex.: armazenamento bloqueado). */
+  private get storage(): Storage {
+    return this.storageKind === 'local' ? localStorage : sessionStorage
   }
 
   get(key: string): T | undefined {
@@ -29,16 +39,16 @@ export class ResponseCache<T> {
     const entry = { value, expiresAt: Date.now() + this.ttlMs }
     this.memory.set(key, entry)
     try {
-      sessionStorage.setItem(this.prefix + key, JSON.stringify(entry))
+      this.storage.setItem(this.prefix + key, JSON.stringify(entry))
     } catch {
-      /* sem sessionStorage: segue só com a memória */
+      /* sem armazenamento: segue só com a memória */
     }
   }
 
   delete(key: string): void {
     this.memory.delete(key)
     try {
-      sessionStorage.removeItem(this.prefix + key)
+      this.storage.removeItem(this.prefix + key)
     } catch {
       /* ignorado */
     }
@@ -46,7 +56,7 @@ export class ResponseCache<T> {
 
   private readStorage(key: string): Entry<T> | undefined {
     try {
-      const raw = sessionStorage.getItem(this.prefix + key)
+      const raw = this.storage.getItem(this.prefix + key)
       return raw ? (JSON.parse(raw) as Entry<T>) : undefined
     } catch {
       return undefined
