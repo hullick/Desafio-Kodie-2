@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { NavId } from '../../config/navigation'
 import { cn } from '../../lib/cn'
 import { DesktopHeaderNav } from '../organisms/DesktopHeaderNav'
 import { MobileBottomTabNav } from '../organisms/MobileBottomTabNav'
 import { MobileTopBar } from '../organisms/MobileTopBar'
+import { SearchModal } from '../organisms/SearchModal'
 import { SiteFooter } from '../organisms/SiteFooter'
 
 /**
@@ -16,7 +17,8 @@ export type PageTemplateProps = {
   activeNav?: NavId
   compareCount?: number
   mobile?: MobileMode
-  onHeaderSearch?: (term: string) => void
+  /** Esconde a lupa do cabeçalho (a Home tem a própria busca). */
+  hideSearch?: boolean
   /** Largura do conteúdo no desktop (padrão: contido em 1200px). */
   fullWidth?: boolean
   children: ReactNode
@@ -31,17 +33,24 @@ export function PageTemplate({
   activeNav,
   compareCount = 0,
   mobile = { mode: 'tab' },
-  onHeaderSearch,
+  hideSearch = false,
   fullWidth = false,
   children,
 }: PageTemplateProps) {
+  const [searchOpen, setSearchOpen] = useState(false)
+  const openSearch = hideSearch ? undefined : () => setSearchOpen(true)
+
   return (
     <div className="flex min-h-screen flex-col bg-surface text-body-md text-on-surface antialiased">
       <div className="hidden lg:block">
-        <DesktopHeaderNav activeId={activeNav} onSearch={onHeaderSearch} />
+        <DesktopHeaderNav activeId={activeNav} onOpenSearch={openSearch} />
       </div>
       <div className="lg:hidden">
-        {mobile.mode === 'stack' ? <MobileTopBar onBack={mobile.onBack} title={mobile.title} /> : <MobileTopBar />}
+        {mobile.mode === 'stack' ? (
+          <MobileTopBar onBack={mobile.onBack} title={mobile.title} onOpenSearch={openSearch} />
+        ) : (
+          <MobileTopBar onOpenSearch={openSearch} />
+        )}
       </div>
 
       <main
@@ -67,6 +76,8 @@ export function PageTemplate({
       <div className="hidden lg:block">
         <SiteFooter />
       </div>
+
+      {openSearch && <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />}
     </div>
   )
 }

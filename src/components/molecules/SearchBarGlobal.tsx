@@ -13,6 +13,8 @@ export type SearchBarGlobalProps = {
   shortcut?: string
   /** Abre filtros avançados (botão à direita na variante hero). */
   onOpenFilters?: () => void
+  /** Recebe o foco quando aparece dentro de um Modal. */
+  autoFocus?: boolean
   className?: string
 }
 
@@ -24,6 +26,7 @@ export function SearchBarGlobal({
   variant = 'default',
   shortcut,
   onOpenFilters,
+  autoFocus = false,
   className,
 }: SearchBarGlobalProps) {
   const handleSubmit = (e: FormEvent) => {
@@ -45,6 +48,7 @@ export function SearchBarGlobal({
         onClear={variant === 'default' ? () => onChange('') : undefined}
         shortcut={shortcut}
         variant={variant}
+        data-autofocus={autoFocus || undefined}
         trailing={
           variant === 'hero' && onOpenFilters ? (
             <Button variant="subtle" size="md" icon="tune" iconOnly aria-label="Filtros avançados" onClick={onOpenFilters} className="mr-1 rounded-xl" />

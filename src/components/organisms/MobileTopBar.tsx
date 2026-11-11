@@ -7,13 +7,15 @@ export type MobileTopBarProps = {
   /** Com `onBack`, vira cabeçalho de pilha: botão voltar + título. */
   onBack?: () => void
   title?: string
-  /** Ações extras à direita (substituem notificações e perfil). */
+  /** Ações extras à direita (substituem a lupa e o perfil). */
   actions?: ReactNode
+  /** Abre o modal de busca (lupa). Sem ele, a lupa não aparece (ex.: Home, que tem a própria busca). */
+  onOpenSearch?: () => void
   avatarUrl?: string
 }
 
-/** Cabeçalho mobile: logo (abas) ou voltar + título (pilha), com sininho e perfil. */
-export function MobileTopBar({ onBack, title, actions, avatarUrl }: MobileTopBarProps) {
+/** Cabeçalho mobile: logo (abas) ou voltar + título (pilha), com lupa de busca e perfil. */
+export function MobileTopBar({ onBack, title, actions, onOpenSearch, avatarUrl }: MobileTopBarProps) {
   return (
     <header className="pt-safe fixed inset-x-0 top-0 z-50 bg-surface/85 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl">
       <div className="flex h-16 items-center justify-between gap-2 px-gutter">
@@ -28,7 +30,9 @@ export function MobileTopBar({ onBack, title, actions, avatarUrl }: MobileTopBar
         <div className="flex items-center gap-1">
           {actions ?? (
             <>
-              <Button variant="ghost" size="lg" icon="notifications" iconOnly aria-label="Notificações" />
+              {onOpenSearch && (
+                <Button variant="ghost" size="lg" icon="search" iconOnly aria-label="Buscar alimentos" onClick={onOpenSearch} />
+              )}
               <a href="/perfil" aria-label="Perfil" className="flex h-11 w-11 items-center justify-center rounded-full">
                 <Avatar src={avatarUrl} />
               </a>

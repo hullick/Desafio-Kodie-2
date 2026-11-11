@@ -140,5 +140,3 @@ export const SORT_OPTIONS = [
   { value: 'nutriscore', label: 'Melhor Nutri-Score' },
   { value: 'name', label: 'Nome (A-Z)' },
 ]
-
-export const SUGGESTIONS = ['Iogurte natural', 'Aveia', 'Refrigerante zero', 'Biscoito integral']

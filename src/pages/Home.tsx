@@ -7,6 +7,7 @@ import { LoadingResults } from '../components/organisms/LoadingResults'
 import { ProductResults } from '../components/organisms/ProductResults'
 import { SearchHero } from '../components/organisms/SearchHero'
 import { PageTemplate } from '../components/templates/PageTemplate'
+import { SEARCH_PARAM, SEARCH_SUGGESTIONS } from '../config/search'
 import { THRESHOLDS } from '../config/thresholds'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useProductSearch } from '../hooks/useProductSearch'
@@ -15,7 +16,7 @@ import { buildCategoryOptions } from '../lib/categoryOptions'
 import { toProductCard } from '../lib/productCard'
 import type { Product } from '../models/Product'
 import { EMPTY_FILTERS, type FilterState } from '../types/filters'
-import { SORT_OPTIONS, SUGGESTIONS } from './home.mock'
+import { SORT_OPTIONS } from './home.mock'
 
 const COMPARE_MAX = 4
 const PAGE_SIZE = 12
@@ -30,15 +31,24 @@ const CATEGORY_PARAM = 'categoria'
 
 export function Home() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [query, setQuery] = useState('')
-  const [term, setTerm] = useState('')
+  // O termo buscado vive na URL (/?busca=...): a lupa das outras telas abre a Home já buscando,
+  // e voltar/avançar no navegador troca a busca.
+  const term = (searchParams.get(SEARCH_PARAM) ?? '').trim()
+  const [query, setQuery] = useState(term)
+  const [page, setPage] = useState(1)
+  const [shownTerm, setShownTerm] = useState(term)
+  if (shownTerm !== term) {
+    // Termo mudou pela URL (outra busca, voltar/avançar): o campo e a paginação acompanham.
+    setShownTerm(term)
+    setQuery(term)
+    setPage(1)
+  }
   // Links de outras telas (comparador, detalhes) abrem a Home já filtrada pela categoria.
   const [filters, setFilters] = useState<FilterState>(() => ({
     ...EMPTY_FILTERS,
     category: searchParams.get(CATEGORY_PARAM) ?? '',
   }))
   const [sort, setSort] = useState('relevance')
-  const [page, setPage] = useState(1)
   const [favorites, setFavorites] = useState<string[]>([])
   const [compare, setCompare] = useState<string[]>([])
 
@@ -92,12 +102,17 @@ export function Home() {
     setSearchParams(next, { replace: true })
   }
   const submitSearch = (t: string) => {
-    setQuery(t)
-    setTerm(t.trim())
+    const next = new URLSearchParams(searchParams)
+    const clean = t.trim()
+    if (clean) next.set(SEARCH_PARAM, clean)
+    else next.delete(SEARCH_PARAM)
     // Outros produtos → outras categorias: a escolhida pode não existir mais.
+    next.delete(CATEGORY_PARAM)
     setFilters((f) => ({ ...f, category: '' }))
-    syncCategoryParam('')
+    setQuery(t)
     setPage(1)
+    // Entra no histórico: "voltar" desfaz a busca.
+    setSearchParams(next)
   }
   const changeFilters = (f: FilterState) => {
     setFilters(f)
@@ -109,9 +124,9 @@ export function Home() {
   const sortProps = { options: SORT_OPTIONS, value: sort, onChange: setSort }
 
   return (
-    <PageTemplate activeNav="home" compareCount={compare.length} onHeaderSearch={submitSearch} fullWidth>
+    <PageTemplate activeNav="home" compareCount={compare.length} hideSearch fullWidth>
       <div className="px-margin lg:px-0">
-        <SearchHero value={query} onChange={setQuery} onSubmit={submitSearch} suggestions={SUGGESTIONS} />
+        <SearchHero value={query} onChange={setQuery} onSubmit={submitSearch} suggestions={SEARCH_SUGGESTIONS} />
       </div>
 
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-space-lg px-margin py-space-md lg:flex-row lg:px-margin-lg">

@@ -14,7 +14,10 @@ export type ModalProps = {
   children: ReactNode
 }
 
-/** Janela modal acessível (usa <dialog> nativo: Esc fecha, foco preso no conteúdo). */
+/**
+ * Janela modal acessível (usa <dialog> nativo: Esc fecha, foco preso no conteúdo).
+ * Ao abrir, foca o elemento com `data-autofocus`, se houver.
+ */
 export function Modal({ open, onClose, title, description, icon, centered = false, size = 'md', children }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -22,7 +25,11 @@ export function Modal({ open, onClose, title, description, icon, centered = fals
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
+    if (open && !dialog.open) {
+      dialog.showModal()
+      // O <dialog> foca o primeiro botão (fechar); `data-autofocus` escolhe outro alvo.
+      dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    }
     if (!open && dialog.open) dialog.close()
   }, [open])
 
