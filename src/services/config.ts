@@ -1,5 +1,13 @@
 /** Configuração do acesso à Open Food Facts (ver SPEC, seção 7). */
-export const OFF_BASE_URL = 'https://world.openfoodfacts.org'
+
+/**
+ * Endereço da API, sem barra final. Vem sempre de VITE_OFF_BASE_URL (arquivos .env por modo ou
+ * variável do deploy; ver .env.example) — o vite.config.ts recusa iniciar sem ela.
+ * - produção: https://world.openfoodfacts.org
+ * - desenvolvimento e testes: https://world.openfoodfacts.net (ambiente de testes, cota de
+ *   requisições separada da produção: testar não bloqueia o IP na API real)
+ */
+export const OFF_BASE_URL = import.meta.env.VITE_OFF_BASE_URL.trim().replace(/\/+$/, '')
 
 /** País aplicado por padrão em toda busca/listagem (`null` desliga o filtro). */
 export const DEFAULT_COUNTRY = 'brazil'
