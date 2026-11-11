@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { SortControl } from '../components/molecules/SortControl'
 import { CompareTray } from '../components/organisms/CompareTray'
 import { FilterPanel } from '../components/organisms/FilterPanel'
@@ -24,10 +25,18 @@ const THRESHOLD_DELAY_MS = 500
 /** Sem nota vai para o fim na ordenação por Nutri-Score. */
 const gradeRank = (p: Product) => p.nutriscore ?? 'z'
 
+/** Parâmetro da URL com a categoria (tag sem "en:"), ex.: /?categoria=milk-powders. */
+const CATEGORY_PARAM = 'categoria'
+
 export function Home() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [term, setTerm] = useState('')
-  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  // Links de outras telas (comparador, detalhes) abrem a Home já filtrada pela categoria.
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    ...EMPTY_FILTERS,
+    category: searchParams.get(CATEGORY_PARAM) ?? '',
+  }))
   const [sort, setSort] = useState('relevance')
   const [page, setPage] = useState(1)
   const [favorites, setFavorites] = useState<string[]>([])
@@ -40,10 +49,15 @@ export function Home() {
   const categoryNames = useCategoryNames()
 
   // Categorias do filtro: as que aparecem nos produtos carregados, no idioma do navegador.
-  const categories = useMemo(
-    () => (search.status === 'success' && categoryNames ? buildCategoryOptions(search.page.products, categoryNames) : []),
-    [search, categoryNames],
-  )
+  // A escolhida (ex.: vinda da URL) entra mesmo fora das principais, para o filtro aparecer marcado.
+  const categories = useMemo(() => {
+    if (search.status !== 'success' || !categoryNames) return []
+    const options = buildCategoryOptions(search.page.products, categoryNames)
+    const selected = filters.category
+    if (!selected || options.some((o) => o.value === selected)) return options
+    const count = search.page.products.filter((p) => p.categories.includes(selected)).length
+    return [{ value: selected, label: `${categoryNames[selected] ?? selected} (${count})` }, ...options]
+  }, [search, categoryNames, filters.category])
 
   const results = useMemo(() => {
     if (search.status !== 'success') return []
@@ -69,15 +83,25 @@ export function Home() {
   const pageItems = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
+  /** Mantém a categoria da URL igual à do filtro (recarregar ou compartilhar o link mantém a escolha). */
+  const syncCategoryParam = (category: string) => {
+    if ((searchParams.get(CATEGORY_PARAM) ?? '') === category) return
+    const next = new URLSearchParams(searchParams)
+    if (category) next.set(CATEGORY_PARAM, category)
+    else next.delete(CATEGORY_PARAM)
+    setSearchParams(next, { replace: true })
+  }
   const submitSearch = (t: string) => {
     setQuery(t)
     setTerm(t.trim())
     // Outros produtos → outras categorias: a escolhida pode não existir mais.
     setFilters((f) => ({ ...f, category: '' }))
+    syncCategoryParam('')
     setPage(1)
   }
   const changeFilters = (f: FilterState) => {
     setFilters(f)
+    syncCategoryParam(f.category)
     setPage(1)
   }
 
@@ -154,7 +178,7 @@ export function Home() {
         count={compare.length}
         lastItem={lastCompared && { name: lastCompared.name ?? 'Produto', imageUrl: lastCompared.imageSmallUrl ?? undefined }}
         onClear={() => setCompare([])}
-        compareHref="/comparar"
+        compareHref={`/comparar?ids=${compare.join(',')}`}
       />
     </PageTemplate>
   )
